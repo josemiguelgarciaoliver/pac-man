@@ -118,3 +118,26 @@ describe('movimiento de un fantasma', () => {
     expect(seenAt12.every((y) => y === 23 * 8 + 4)).toBe(true);
   });
 });
+
+describe('dificultad', () => {
+  it('fácil es más suave que el arcade en todo lo importante', () => {
+    for (const level of [1, 2, 3, 10, 30]) {
+      const easy = getLevelRules(level, 'easy');
+      const arcade = getLevelRules(level, 'arcade');
+      expect(easy.ghostSpeed).toBeLessThan(arcade.ghostSpeed);
+      expect(easy.pacSpeed).toBeGreaterThan(arcade.pacSpeed);
+      expect(easy.frightTicks).toBeGreaterThan(arcade.frightTicks);
+      expect(easy.elroy1Dots).toBe(0);
+    }
+  });
+  it('en fácil Pac-Man es más rápido que los fantasmas', () => {
+    for (const level of [1, 2, 5, 20, 50]) {
+      const r = getLevelRules(level, 'easy');
+      expect(r.pacSpeed).toBeGreaterThan(r.ghostSpeed);
+    }
+  });
+  it('arcade respeta las tablas originales', () => {
+    expect(getLevelRules(1, 'arcade').ghostSpeed).toBe(0.75);
+    expect(getLevelRules(1).frightTicks).toBe(360);
+  });
+});

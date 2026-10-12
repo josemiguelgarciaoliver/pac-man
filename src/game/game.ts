@@ -6,11 +6,11 @@ import { ORIGINAL_MAZE, ORIGINAL_PAC_SPAWN } from '../data/mazes/original';
 import { HOUSE_DOOR_TILE, SCATTER_TARGETS, chaseTarget, type GhostName, type Tile } from './actors/ai';
 import { Ghost, type MoveEnv } from './actors/ghost';
 import { PacMan } from './actors/pacman';
-import { BASE_SPEED, COLORS, MAZE_TOP, SCREEN_H, SCREEN_W, TICK_RATE, TILE } from './constants';
+import { BASE_SPEED, COLORS, Dir, MAZE_TOP, SCREEN_H, SCREEN_W, TICK_RATE, TILE } from './constants';
 import { Maze } from './maze/maze';
 import { renderWalls } from './maze/render';
 import { createRng, type Rng } from './random';
-import { FRUIT_POINTS, GHOST_POINTS, GLOBAL_RELEASE, fruitForLevel, getLevelRules, type LevelRules } from './rules';
+import { DIFFICULTIES, DIFFICULTY_PRESETS, FRUIT_POINTS, GHOST_POINTS, GLOBAL_RELEASE, fruitForLevel, getLevelRules, type Difficulty, type LevelRules } from './rules';
 import { drawFruit, drawGhost, drawPac, drawPacDeath, type GhostLook } from './sprites';
 
 type State = 'title' | 'ready' | 'play' | 'ghostEaten' | 'dying' | 'clear' | 'gameover' | 'paused';
@@ -26,6 +26,7 @@ const FLASH_PERIOD = 14;
 const HOUSE_SPEED = 0.5;
 const EATEN_SPEED = (BASE_SPEED * 1.6) / TICK_RATE;
 const HIGH_KEY = 'pacman.highscore';
+const DIFFICULTY_KEY = 'pacman.difficulty';
 const FRUIT_TILE = { col: 13, row: 17 };
 const FRUIT_X = 112;
 const FRUIT_Y = 17 * TILE + 4;
@@ -43,6 +44,16 @@ interface Popup {
   text: string;
   ticks: number;
 }
+
+const readDifficulty = (): Difficulty => {
+  try {
+    const v = localStorage.getItem(DIFFICULTY_KEY);
+    if (v === 'easy' || v === 'normal' || v === 'arcade') return v;
+  } catch {
+    /* sin almacenamiento */
+  }
+  return 'easy';
+};
 
 const readHighScore = (): number => {
   try {
@@ -72,7 +83,8 @@ export class Game {
   /** Vidas extra restantes (las que se muestran abajo). */
   private lives = 2;
   private level = 1;
-  private rules: LevelRules = getLevelRules(1);
+  private difficulty: Difficulty = readDifficulty();
+  private rules: LevelRules = getLevelRules(1, this.difficulty);
   /** La primera partida espera a que acabe la melodía de inicio. */
   private introJingle = false;
 
@@ -114,7 +126,7 @@ export class Game {
     switch (this.state) {
       case 'title':
         this.audio.setAmbient(null);
-        if (pressed) this.startGame();
+        this.updateTitle(pressed);
         break;
       case 'ready':
         if (--this.timer <= 0) this.state = 'play';
@@ -148,6 +160,25 @@ export class Game {
     }
   }
 
+  /** En el título, izquierda/derecha (teclas, swipe o cruceta) cambian la dificultad. */
+  private updateTitle(pressed: boolean): void {
+    const dir = this.input.direction;
+    if (dir === Dir.Left || dir === Dir.Right) {
+      const i = DIFFICULTIES.indexOf(this.difficulty);
+      const n = DIFFICULTIES.length;
+      this.difficulty = DIFFICULTIES[(i + (dir === Dir.Right ? 1 : n - 1)) % n];
+      this.input.direction = null;
+      try {
+        localStorage.setItem(DIFFICULTY_KEY, this.difficulty);
+      } catch {
+        /* sin almacenamiento */
+      }
+      return;
+    }
+    if (dir !== null) this.input.direction = null;
+    if (pressed && dir === null) this.startGame();
+  }
+
   /** Pausa automática al perder el foco (no hace nada si no se está jugando). */
   pauseIfPlaying(): void {
     if (this.state === 'play') this.pause();
@@ -161,14 +192,14 @@ export class Game {
 
   private startGame(): void {
     this.score = 0;
-    this.lives = 2;
+    this.lives = DIFFICULTY_PRESETS[this.difficulty].lives;
     this.level = 1;
     this.introJingle = true;
     this.startLevel();
   }
 
   private startLevel(): void {
-    this.rules = getLevelRules(this.level);
+    this.rules = getLevelRules(this.level, this.difficulty);
     this.maze.resetPellets();
     this.personal = { pinky: 0, inky: 0, clyde: 0 };
     this.globalMode = false;
@@ -558,6 +589,8 @@ export class Game {
       drawTextCentered(ctx, 'PUSH START', SCREEN_W / 2, 18 * TILE, COLORS.text);
     }
     drawTextCentered(ctx, 'TAP  KEY  BUTTON', SCREEN_W / 2, 21 * TILE, COLORS.dot);
+    drawTextCentered(ctx, 'DIFICULTAD', SCREEN_W / 2, 24 * TILE, '#7fa0ff');
+    drawTextCentered(ctx, `< ${DIFFICULTY_PRESETS[this.difficulty].label} >`, SCREEN_W / 2, 26 * TILE, COLORS.ready);
     drawTextCentered(ctx, this.audio.muted ? 'SOUND OFF  M' : 'SOUND ON  M', SCREEN_W / 2, 31 * TILE, '#7fa0ff');
   }
 
