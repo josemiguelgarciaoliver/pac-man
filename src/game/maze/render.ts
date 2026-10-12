@@ -1,8 +1,13 @@
 import { COLORS, TILE } from '../constants';
 import type { Maze } from './maze';
 
-/** Radio (px) del margen entre el suelo y la línea de la pared; da las esquinas redondeadas. */
-const MARGIN = 3;
+/** Resolución del lienzo de paredes: píxeles por unidad lógica. */
+const RES = 6;
+/** Distancia (unidades lógicas) entre el suelo y la línea de la pared; da las esquinas redondeadas. */
+const LINE_FROM = 3.0;
+const LINE_TO = 4.3;
+/** El resplandor interior se desvanece hasta esta distancia. */
+const GLOW_TO = 8;
 
 function hexToRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16);
@@ -10,60 +15,93 @@ function hexToRgb(hex: string): [number, number, number] {
 }
 
 /**
- * Dibuja las paredes de forma procedural: se encoge cada bloque de pared MARGIN px respecto al
- * suelo (distancia euclídea → esquinas redondeadas) y se traza el contorno de 1 px del resultado.
- * Funciona para cualquier laberinto, por lo que los 100 niveles comparten el estilo arcade.
+ * Campo de distancias de cada punto de pared al suelo más cercano, calculado a alta resolución.
+ * A partir de él salen las paredes con esquinas redondeadas para cualquier laberinto.
  */
-export function renderWalls(maze: Maze, color: string = COLORS.wall): HTMLCanvasElement {
-  const w = maze.cols * TILE;
-  const h = maze.rows * TILE;
-  const solid = new Uint8Array(w * h).fill(1);
+function wallDistances(maze: Maze): Float32Array {
+  const w = maze.cols * TILE * RES;
+  const h = maze.rows * TILE * RES;
+  const dist = new Float32Array(w * h).fill(Infinity);
 
-  for (let py = 0; py < h; py++) {
-    for (let px = 0; px < w; px++) {
-      const tc = Math.floor(px / TILE);
-      const tr = Math.floor(py / TILE);
-      if (maze.isOpen(tc, tr)) {
-        solid[py * w + px] = 0;
-        continue;
-      }
-      // Distancia del centro del píxel al suelo más cercano entre las casillas vecinas.
-      const fx = px + 0.5;
-      const fy = py + 0.5;
-      for (let dr = -1; dr <= 1; dr++) {
-        for (let dc = -1; dc <= 1; dc++) {
-          if (!maze.isOpen(tc + dc, tr + dr)) continue;
-          const x0 = (tc + dc) * TILE;
-          const y0 = (tr + dr) * TILE;
-          const dx = Math.max(x0 - fx, 0, fx - (x0 + TILE));
-          const dy = Math.max(y0 - fy, 0, fy - (y0 + TILE));
-          if (dx * dx + dy * dy <= MARGIN * MARGIN) solid[py * w + px] = 0;
+  for (let tr = 0; tr < maze.rows; tr++) {
+    for (let tc = 0; tc < maze.cols; tc++) {
+      if (maze.isOpen(tc, tr)) continue;
+      const open: [number, number][] = [];
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) if (maze.isOpen(tc + dc, tr + dr)) open.push([(tc + dc) * TILE, (tr + dr) * TILE]);
+      if (open.length === 0) continue;
+      for (let py = tr * TILE * RES; py < (tr + 1) * TILE * RES; py++) {
+        const fy = (py + 0.5) / RES;
+        for (let px = tc * TILE * RES; px < (tc + 1) * TILE * RES; px++) {
+          const fx = (px + 0.5) / RES;
+          let best = Infinity;
+          for (const [x0, y0] of open) {
+            const dx = Math.max(x0 - fx, 0, fx - (x0 + TILE));
+            const dy = Math.max(y0 - fy, 0, fy - (y0 + TILE));
+            const d2 = dx * dx + dy * dy;
+            if (d2 < best) best = d2;
+          }
+          dist[py * w + px] = Math.sqrt(best);
         }
       }
     }
   }
+  return dist;
+}
 
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d')!;
-  const img = ctx.createImageData(w, h);
+const distCache = new WeakMap<Maze, Float32Array>();
+
+/** Paredes con trazo luminoso, esquinas redondeadas y un suave brillo interior. */
+export function renderWalls(maze: Maze, color: string = COLORS.wall): HTMLCanvasElement {
+  const w = maze.cols * TILE * RES;
+  const h = maze.rows * TILE * RES;
+  let dist = distCache.get(maze);
+  if (!dist) distCache.set(maze, (dist = wallDistances(maze)));
+
+  const line = document.createElement('canvas');
+  line.width = w;
+  line.height = h;
+  const lctx = line.getContext('2d')!;
+  const img = lctx.createImageData(w, h);
   const [r, g, b] = hexToRgb(color);
-  const at = (x: number, y: number) => (x < 0 || y < 0 || x >= w || y >= h ? 1 : solid[y * w + x]);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (!solid[y * w + x]) continue;
-      if (at(x - 1, y) && at(x + 1, y) && at(x, y - 1) && at(x, y + 1)) continue;
-      const i = (y * w + x) * 4;
-      img.data[i] = r;
-      img.data[i + 1] = g;
-      img.data[i + 2] = b;
-      img.data[i + 3] = 255;
+  const aa = RES * 0.9;
+  for (let i = 0; i < dist.length; i++) {
+    const d = dist[i];
+    let a = 0;
+    if (d >= LINE_FROM - 0.2 && d <= LINE_TO + 0.2) {
+      a = Math.min(1, (d - (LINE_FROM - 0.2)) * aa, (LINE_TO + 0.2 - d) * aa);
+    } else if (d > LINE_TO && d < GLOW_TO) {
+      a = 0.32 * (1 - (d - LINE_TO) / (GLOW_TO - LINE_TO)) ** 2;
     }
+    if (a <= 0) continue;
+    const o = i * 4;
+    img.data[o] = r;
+    img.data[o + 1] = g;
+    img.data[o + 2] = b;
+    img.data[o + 3] = Math.round(a * 255);
   }
-  ctx.putImageData(img, 0, 0);
+  lctx.putImageData(img, 0, 0);
 
+  // Resplandor exterior: la capa se pinta una vez con sombra y otra encima, nítida.
+  const out = document.createElement('canvas');
+  out.width = w;
+  out.height = h;
+  const ctx = out.getContext('2d')!;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = RES * 2.4;
+  ctx.drawImage(line, 0, 0);
+  ctx.shadowBlur = 0;
+  ctx.drawImage(line, 0, 0);
+
+  // Puerta de la casa de fantasmas.
+  ctx.shadowColor = COLORS.door;
+  ctx.shadowBlur = RES * 1.5;
   ctx.fillStyle = COLORS.door;
-  for (const d of maze.doors()) ctx.fillRect(d.c * TILE, d.r * TILE + TILE / 2 - 1, TILE, 2);
-  return canvas;
+  for (const d of maze.doors()) {
+    const x = d.c * TILE * RES;
+    const y = (d.r * TILE + TILE / 2 - 1) * RES;
+    ctx.beginPath();
+    ctx.roundRect(x, y, TILE * RES, 2 * RES, RES);
+    ctx.fill();
+  }
+  return out;
 }

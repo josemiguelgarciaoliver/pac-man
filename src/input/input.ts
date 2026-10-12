@@ -23,6 +23,7 @@ export class Input {
   direction: Dir | null = null;
   private pressed = false;
   private pauseRequested = false;
+  private muteRequested = false;
   private touchStart: { id: number; x: number; y: number } | null = null;
   private padWasDown = false;
   private padStartWasDown = false;
@@ -35,6 +36,7 @@ export class Input {
       }
       if (e.code === 'Enter' || e.code === 'Space') this.pressed = true;
       if (e.code === 'KeyP' || e.code === 'Escape') this.pauseRequested = true;
+      if (e.code === 'KeyM') this.muteRequested = true;
       this.pressed = true;
     });
 
@@ -88,6 +90,12 @@ export class Input {
     const p = this.pressed;
     this.pressed = false;
     return p;
+  }
+
+  consumeMute(): boolean {
+    const m = this.muteRequested;
+    this.muteRequested = false;
+    return m;
   }
 
   consumePause(): boolean {

@@ -1,3 +1,5 @@
+import type { AudioManager } from '../audio/audio';
+import { levelPosition } from '../data/worlds';
 import { drawText, drawTextCentered, drawTextRight } from '../engine/font';
 import type { Input } from '../input/input';
 import { ORIGINAL_MAZE, ORIGINAL_PAC_SPAWN } from '../data/mazes/original';
@@ -9,7 +11,7 @@ import { Maze } from './maze/maze';
 import { renderWalls } from './maze/render';
 import { createRng, type Rng } from './random';
 import { FRUIT_POINTS, GHOST_POINTS, GLOBAL_RELEASE, fruitForLevel, getLevelRules, type LevelRules } from './rules';
-import { PAC_DEATH_FRAMES, SPRITE_SIZE, fruitSprite, ghostSprite, pacDeathSprite, pacSprite, type GhostLook } from './sprites';
+import { drawFruit, drawGhost, drawPac, drawPacDeath, type GhostLook } from './sprites';
 
 type State = 'title' | 'ready' | 'play' | 'ghostEaten' | 'dying' | 'clear' | 'gameover' | 'paused';
 
@@ -18,6 +20,7 @@ const CLEAR_TICKS = 2 * TICK_RATE;
 const GHOST_EATEN_TICKS = TICK_RATE;
 const DEATH_FREEZE = 45;
 const DEATH_FRAME_TICKS = 8;
+const DEATH_FRAMES = 11;
 const GAMEOVER_TICKS = 3 * TICK_RATE;
 const FLASH_PERIOD = 14;
 const HOUSE_SPEED = 0.5;
@@ -28,6 +31,8 @@ const FRUIT_X = 112;
 const FRUIT_Y = 17 * TILE + 4;
 const FRUIT_SPAWN_AT = [70, 170];
 const FRUIT_TICKS = 9 * TICK_RATE + 30;
+/** Fila de pantalla (con el HUD) donde el arcade escribe READY!, justo bajo la casa de fantasmas. */
+const MESSAGE_Y = 20 * TILE + 1;
 
 const GHOST_NAMES: GhostName[] = ['blinky', 'pinky', 'inky', 'clyde'];
 const HOUSE_ORDER: Exclude<GhostName, 'blinky'>[] = ['pinky', 'inky', 'clyde'];
@@ -68,6 +73,8 @@ export class Game {
   private lives = 2;
   private level = 1;
   private rules: LevelRules = getLevelRules(1);
+  /** La primera partida espera a que acabe la melodía de inicio. */
+  private introJingle = false;
 
   // Modos de los fantasmas
   private modeIndex = 0;
@@ -86,7 +93,10 @@ export class Game {
   private popups: Popup[] = [];
   private eatenGhost: Ghost | null = null;
 
-  constructor(private readonly input: Input) {
+  constructor(
+    private readonly input: Input,
+    private readonly audio: AudioManager,
+  ) {
     // ?autostart salta la pantalla de título (útil para pruebas E2E y capturas).
     if (new URLSearchParams(location.search).has('autostart')) this.startGame();
   }
@@ -97,9 +107,11 @@ export class Game {
     this.frame++;
     this.input.poll();
     const pressed = this.input.consumePress();
+    if (this.input.consumeMute()) this.audio.toggleMute();
 
     switch (this.state) {
       case 'title':
+        this.audio.setAmbient(null);
         if (pressed) this.startGame();
         break;
       case 'ready':
@@ -109,11 +121,13 @@ export class Game {
         if (this.input.consumePause()) {
           this.resumeState = 'play';
           this.state = 'paused';
+          this.audio.suspend();
           break;
         }
         this.updatePlay();
         break;
       case 'ghostEaten':
+        this.audio.setAmbient(null);
         this.updateGhostEaten();
         break;
       case 'dying':
@@ -126,7 +140,10 @@ export class Game {
         if (--this.timer <= 0) this.state = 'title';
         break;
       case 'paused':
-        if (this.input.consumePause()) this.state = this.resumeState;
+        if (this.input.consumePause()) {
+          this.state = this.resumeState;
+          this.audio.resume();
+        }
         break;
     }
   }
@@ -135,6 +152,7 @@ export class Game {
     this.score = 0;
     this.lives = 2;
     this.level = 1;
+    this.introJingle = true;
     this.startLevel();
   }
 
@@ -162,8 +180,15 @@ export class Game {
     this.popups = [];
     this.eatenGhost = null;
     this.initBlinky();
+    this.audio.setAmbient(null);
     this.state = 'ready';
     this.timer = READY_TICKS;
+    if (this.introJingle) {
+      this.introJingle = false;
+      this.audio.play('start');
+      // Si la melodía ya cargó, READY! dura lo que ella (≈4 s en el arcade).
+      this.timer = Math.max(READY_TICKS, Math.round(this.audio.duration('start') * TICK_RATE));
+    }
   }
 
   private nextLevel(): void {
@@ -235,11 +260,26 @@ export class Game {
     for (const g of this.ghosts) g.move(this.envFor(g), this.ghostSpeed(g));
     this.updateFruit();
     this.updatePopups();
+    this.updateAmbient();
 
     if (this.checkCollisions()) return;
     if (this.maze.pelletsLeft === 0) {
+      this.audio.setAmbient(null);
       this.state = 'clear';
       this.timer = CLEAR_TICKS;
+    }
+  }
+
+  /** Sonido de fondo con la misma prioridad que el arcade: ojos > asustados > sirena. */
+  private updateAmbient(): void {
+    if (this.ghosts.some((g) => g.state === 'eaten' || g.state === 'entering')) {
+      this.audio.setAmbient('eyes');
+    } else if (this.frightTicks > 0) {
+      this.audio.setAmbient('power');
+    } else {
+      const left = this.maze.pelletsLeft;
+      const stage = left > 150 ? 0 : left > 100 ? 1 : left > 50 ? 2 : left > 20 ? 3 : 4;
+      this.audio.setAmbient('siren', stage);
     }
   }
 
@@ -266,6 +306,7 @@ export class Game {
   private eat(): void {
     const kind = this.maze.eatPellet(this.pac.col, this.pac.row);
     if (!kind) return;
+    this.audio.waka();
     this.addScore(kind === 'dot' ? 10 : 50);
     this.eatPause = kind === 'dot' ? 1 : 3;
     this.idleTicks = 0;
@@ -292,6 +333,7 @@ export class Game {
       if (this.pac.row === FRUIT_TILE.row && Math.abs(this.pac.x - FRUIT_X) < 6) {
         const points = FRUIT_POINTS[fruitForLevel(this.level)];
         this.addScore(points);
+        this.audio.play('eat_fruit');
         this.popups.push({ x: FRUIT_X, y: FRUIT_Y, text: String(points), ticks: 2 * TICK_RATE });
         this.fruitTicks = 0;
       }
@@ -306,7 +348,10 @@ export class Game {
   private addScore(points: number): void {
     const before = this.score;
     this.score += points;
-    if (before < 10000 && this.score >= 10000) this.lives++;
+    if (before < 10000 && this.score >= 10000) {
+      this.lives++;
+      this.audio.play('extra_life');
+    }
     if (this.score > this.high) {
       this.high = this.score;
       try {
@@ -375,6 +420,7 @@ export class Game {
         this.eatGhost(g);
         return true;
       }
+      this.audio.setAmbient(null);
       this.state = 'dying';
       this.timer = 0;
       return true;
@@ -386,6 +432,7 @@ export class Game {
     const points = GHOST_POINTS[Math.min(this.frightCombo, 3)];
     this.frightCombo++;
     this.addScore(points);
+    this.audio.play('eat_ghost');
     g.state = 'eaten';
     g.frightened = false;
     this.eatenGhost = g;
@@ -404,7 +451,8 @@ export class Game {
 
   private updateDying(): void {
     this.timer++;
-    const total = DEATH_FREEZE + PAC_DEATH_FRAMES * DEATH_FRAME_TICKS + 30;
+    if (this.timer === DEATH_FREEZE) this.audio.play('death');
+    const total = DEATH_FREEZE + DEATH_FRAMES * DEATH_FRAME_TICKS + 30;
     if (this.timer < total) return;
     if (this.lives <= 0) {
       this.state = 'gameover';
@@ -431,24 +479,19 @@ export class Game {
     }
 
     const flashWhite = this.state === 'clear' && Math.floor(this.timer / 15) % 2 === 0;
-    ctx.drawImage(flashWhite ? this.wallsWhite : this.wallsBlue, 0, MAZE_TOP);
+    ctx.drawImage(flashWhite ? this.wallsWhite : this.wallsBlue, 0, MAZE_TOP, this.maze.cols * TILE, this.maze.rows * TILE);
     if (this.state !== 'clear') this.drawPellets(ctx);
-    if (this.fruitTicks > 0 && this.state !== 'clear') this.drawSprite(ctx, fruitSprite(fruitForLevel(this.level)), FRUIT_X, FRUIT_Y);
+    if (this.fruitTicks > 0 && this.state !== 'clear') drawFruit(ctx, fruitForLevel(this.level), FRUIT_X, MAZE_TOP + FRUIT_Y);
 
     const hideGhosts = this.state === 'clear' || (this.state === 'dying' && this.timer >= DEATH_FREEZE);
     if (!hideGhosts) this.drawGhosts(ctx);
     this.drawPac(ctx);
     this.drawPopups(ctx);
 
-    const msgY = MAZE_TOP + 20 * TILE + 1;
-    if (this.state === 'ready') drawTextCentered(ctx, 'READY!', SCREEN_W / 2, msgY, COLORS.ready);
-    if (this.state === 'paused') drawTextCentered(ctx, 'PAUSE', SCREEN_W / 2, msgY, COLORS.ready);
-    if (this.state === 'gameover') drawTextCentered(ctx, 'GAME  OVER', SCREEN_W / 2, msgY, '#ff0000');
+    if (this.state === 'ready') drawTextCentered(ctx, 'READY!', SCREEN_W / 2, MESSAGE_Y, COLORS.ready);
+    if (this.state === 'paused') drawTextCentered(ctx, 'PAUSE', SCREEN_W / 2, MESSAGE_Y, COLORS.ready);
+    if (this.state === 'gameover') drawTextCentered(ctx, 'GAME  OVER', SCREEN_W / 2, MESSAGE_Y, '#ff2a2a');
     this.drawFooter(ctx);
-  }
-
-  private drawSprite(ctx: CanvasRenderingContext2D, sprite: HTMLCanvasElement, x: number, y: number): void {
-    ctx.drawImage(sprite, Math.round(x - SPRITE_SIZE / 2), Math.round(MAZE_TOP + y - SPRITE_SIZE / 2));
   }
 
   private ghostLook(g: Ghost): GhostLook {
@@ -461,25 +504,26 @@ export class Game {
   private drawGhosts(ctx: CanvasRenderingContext2D): void {
     for (const g of this.ghosts) {
       if (this.state === 'ghostEaten' && g === this.eatenGhost) continue;
-      this.drawSprite(ctx, ghostSprite(g.name, g.dir, g.anim, this.ghostLook(g)), g.x, g.y);
+      drawGhost(ctx, g.x, MAZE_TOP + g.y, g.name, g.dir, g.anim, this.ghostLook(g));
     }
   }
 
   private drawPac(ctx: CanvasRenderingContext2D): void {
     if (this.state === 'ghostEaten') return;
+    const y = MAZE_TOP + this.pac.y;
     if (this.state === 'dying' && this.timer >= DEATH_FREEZE) {
-      const i = Math.floor((this.timer - DEATH_FREEZE) / DEATH_FRAME_TICKS);
-      if (i < PAC_DEATH_FRAMES) this.drawSprite(ctx, pacDeathSprite(i), this.pac.x, this.pac.y);
+      const progress = (this.timer - DEATH_FREEZE) / (DEATH_FRAMES * DEATH_FRAME_TICKS);
+      if (progress < 1) drawPacDeath(ctx, this.pac.x, y, progress);
       return;
     }
     const anim = this.pac.moving && this.state === 'play' ? this.pac.anim : 0;
-    this.drawSprite(ctx, pacSprite(this.pac.dir, anim), this.pac.x, this.pac.y);
+    drawPac(ctx, this.pac.x, y, this.pac.dir, anim);
   }
 
   private drawPopups(ctx: CanvasRenderingContext2D): void {
     for (const p of this.popups) {
       const w = p.text.length * 8;
-      drawText(ctx, p.text, Math.round(p.x - w / 2), Math.round(MAZE_TOP + p.y - 4), '#00ffff');
+      drawText(ctx, p.text, Math.round(p.x - w / 2), Math.round(MAZE_TOP + p.y - 4), '#27e8ff');
     }
   }
 
@@ -489,6 +533,12 @@ export class Game {
     drawText(ctx, 'HIGH SCORE', 9 * TILE, 0, COLORS.text);
     drawTextRight(ctx, this.state === 'title' ? '00' : String(this.score).padStart(2, '0'), 7 * TILE, TILE, COLORS.text);
     drawTextRight(ctx, String(this.high).padStart(2, '0'), 17 * TILE, TILE, COLORS.text);
+
+    if (this.state !== 'title') {
+      const pos = levelPosition(this.level);
+      drawTextRight(ctx, `MUNDO ${pos.world}`, SCREEN_W - 4, 0, '#7fa0ff');
+      drawTextRight(ctx, `NIVEL ${pos.stage}`, SCREEN_W - 4, TILE, COLORS.text);
+    }
   }
 
   private drawTitle(ctx: CanvasRenderingContext2D): void {
@@ -497,31 +547,51 @@ export class Game {
       drawTextCentered(ctx, 'PUSH START', SCREEN_W / 2, 18 * TILE, COLORS.text);
     }
     drawTextCentered(ctx, 'TAP  KEY  BUTTON', SCREEN_W / 2, 21 * TILE, COLORS.dot);
+    drawTextCentered(ctx, this.audio.muted ? 'SOUND OFF  M' : 'SOUND ON  M', SCREEN_W / 2, 31 * TILE, '#7fa0ff');
   }
 
   private drawPellets(ctx: CanvasRenderingContext2D): void {
     ctx.fillStyle = COLORS.dot;
-    const energizerOn = Math.floor(this.frame / 10) % 2 === 0;
+    ctx.beginPath();
+    const energizers: { x: number; y: number }[] = [];
     for (const p of this.maze.pelletTiles()) {
-      const x = p.c * TILE;
-      const y = MAZE_TOP + p.r * TILE;
+      const x = p.c * TILE + TILE / 2;
+      const y = MAZE_TOP + p.r * TILE + TILE / 2;
       if (p.kind === 'dot') {
-        ctx.fillRect(x + 3, y + 3, 2, 2);
-      } else if (energizerOn) {
-        ctx.fillRect(x + 2, y, 4, 8);
-        ctx.fillRect(x, y + 2, 8, 4);
-        ctx.fillRect(x + 1, y + 1, 6, 6);
+        ctx.moveTo(x + 1.2, y);
+        ctx.arc(x, y, 1.2, 0, Math.PI * 2);
+      } else {
+        energizers.push({ x, y });
       }
     }
+    ctx.fill();
+
+    // Los energizers laten y brillan.
+    const pulse = 3.5 + 0.5 * Math.sin(this.frame / 5);
+    const blinkOn = Math.floor(this.frame / 10) % 2 === 0 || this.state !== 'play';
+    if (!blinkOn) return;
+    ctx.save();
+    ctx.shadowColor = '#ffb8ae';
+    ctx.shadowBlur = ctx.getTransform().a * 3;
+    for (const e of energizers) {
+      const g = ctx.createRadialGradient(e.x - 1, e.y - 1, 0.4, e.x, e.y, pulse);
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(0.5, '#ffd2c8');
+      g.addColorStop(1, '#ff9a8a');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, pulse, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   private drawFooter(ctx: CanvasRenderingContext2D): void {
-    const y = MAZE_TOP + 31 * TILE + 1;
-    const icon = pacSprite(1, 2);
-    for (let i = 0; i < Math.min(this.lives, 5); i++) ctx.drawImage(icon, 16 + i * 16, y);
+    const y = MAZE_TOP + 31 * TILE + 9;
+    for (let i = 0; i < Math.min(this.lives, 5); i++) drawPac(ctx, 24 + i * 16, y, 1, 2);
     // Últimas 7 frutas de los niveles jugados, la más reciente a la derecha.
     for (let k = 0; k < Math.min(this.level, 7); k++) {
-      ctx.drawImage(fruitSprite(fruitForLevel(this.level - k)), SCREEN_W - 24 - k * 16, y);
+      drawFruit(ctx, fruitForLevel(this.level - k), SCREEN_W - 16 - k * 16, y);
     }
   }
 }

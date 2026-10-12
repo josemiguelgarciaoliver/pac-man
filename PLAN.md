@@ -343,7 +343,7 @@ La familia no es un adorno de un mundo: está presente en **todos** los niveles,
 - **Paleta:** la del arcade (16 colores base). Cada mundo añade sus propios colores de pared y de *hazard*.
 - **Fuente bitmap 8×8** estilo arcade para el HUD y los menús.
 - **Animaciones:** parpadeo de energizers, laberinto que parpadea al completarlo, muerte de Pac-Man (11 frames) y puntos flotantes al comer fantasmas o fruta.
-- **Pixel art propio** que reproduce el estilo; no se extraen ROMs (ver §9).
+- **Gráficos vectoriales suaves** (decisión posterior): sprites, frutas y texto se dibujan con paths, degradados y brillos a la resolución real de la pantalla; paredes con trazo luminoso y esquinas redondeadas generadas a partir del mapa. Mantienen el diseño del arcade pero sin aspecto pixelado. No se extraen ROMs (ver §9).
 
 ### 5.2 Audio (assets los aporta el usuario)
 Nombres esperados en `public/assets/audio/`:
@@ -397,9 +397,9 @@ Cada fase acaba en un hito jugable y desplegado en GitHub Pages.
 - **Hito:** clon del arcade jugable de principio a fin, sin sonido.
 
 ### Fase 3 — Audio
-- [ ] `AudioManager` con Web Audio: canales, prioridades, bucles sin cortes y sirena dinámica.
-- [ ] Integración de los assets del usuario y *placeholders* sintetizados mientras no estén.
-- [ ] Ajustes de volumen y silencio.
+- [x] `AudioManager` con Web Audio: efectos WAV originales + sirena/asustados/ojos sintetizados con prioridades (bucles sin cortes y sirena por etapas).
+- [x] Integración de los assets del usuario (7 WAV de classicgaming.cc); sirena, power pellet y ojos sintetizados.
+- [~] Silencio con la tecla M (guardado); pendiente: ajustes de volumen y botón táctil de mute.
 - **Hito:** experiencia audiovisual idéntica al arcade.
 
 ### Fase 4 — Multiplataforma y PWA
