@@ -61,13 +61,14 @@ pac-man/
 │  ├─ audio/             # AudioManager, canales, sirena dinámica
 │  ├─ game/
 │  │  ├─ rules/          # tablas originales: velocidades, tiempos, frutas, puntuación
-│  │  ├─ actors/         # Pac-Man, fantasmas (IA), NPCs (Ms. Pac-Man, Pac-Baby…)
+│  │  ├─ actors/         # Pac-Man, fantasmas (IA), NPCs (Cely, Aina, Aleix)
 │  │  ├─ maze/           # carga, render de paredes procedural, grafo de navegación
 │  │  ├─ mechanics/      # cintas, trampas, puertas, hielo, teletransportes… (plugins)
 │  │  ├─ missions/       # sistema de objetivos
 │  │  └─ states/         # attract, menú, intro, jugando, muerte, intermedio, game over
 │  ├─ ui/                # HUD, menús, selector de mundos, ajustes
 │  └─ data/
+│     ├─ family.json     # Cely, Aina, Aleix: nombres, sprites, frases y cartas
 │     ├─ worlds/         # world-01.json … world-10.json
 │     └─ mazes/          # w01-l01.maze … w10-l10.maze (ASCII)
 ├─ tools/
@@ -153,7 +154,7 @@ Un nivel puede combinar un objetivo principal con objetivos secundarios opcional
 
 ### 4.4 Historia y mundos
 
-**Hilo narrativo:** el *Fantasma Rey* ha secuestrado a **Ms. Pac-Man** y ha encerrado a la familia (Pac-Baby, Pac-Abuela…) repartida por los 10 mundos. Cada mundo termina con un rescate y una *intermission* animada al estilo de las originales.
+**Hilo narrativo:** el *Fantasma Rey* ha secuestrado a **Cely** (la esposa de Pac-Man) y la ha escondido en el último mundo. Pac-Man, el padre, sale a rescatarla acompañado de sus hijos **Aina** (12) y **Aleix** (8), que lo acompañan en los 100 niveles (ver §4.5). Cada mundo termina con un jefe, un *recuerdo familiar* como recompensa y una *intermission* animada al estilo de las originales. El nivel 100 culmina con el rescate de Cely.
 
 Cada mundo tiene paleta de pared propia, una mecánica estrella que se introduce y luego se complica, y un jefe o reto final en el nivel 10.
 
@@ -172,7 +173,7 @@ Cada mundo tiene paleta de pared propia, una mecánica estrella que se introduce
 | 7 | Energizers que se mueven lentamente por el laberinto |
 | 8 | Misión `HUNT`: come 8 fantasmas |
 | 9 | Laberinto asimétrico con menos energizers |
-| 10 | **Jefe:** Blinky gigante (2×2 tiles) que solo es vulnerable a energizers dobles. Rescate de **Pac-Baby** |
+| 10 | **Jefe:** Blinky gigante (2×2 tiles) que solo es vulnerable a energizers dobles. Recompensa: recuerdo familiar nº 1 (foto de la playa) |
 
 #### 🌳 Mundo 2 — **Bosque Encantado** (paredes verdes)
 *Motivo: naturaleza y visibilidad reducida.*
@@ -187,7 +188,7 @@ Cada mundo tiene paleta de pared propia, una mecánica estrella que se introduce
 | 17 | Misión `ESCORT`: guiar a una ardilla por el bosque |
 | 18 | Niebla: solo se ve un radio alrededor de Pac-Man |
 | 19 | Combinación de setas + niebla |
-| 20 | **Jefe:** el Ent-Fantasma, que cambia el laberinto girando bloques. Rescate de la **Pac-Abuela** |
+| 20 | **Jefe:** el Ent-Fantasma, que cambia el laberinto girando bloques. Recompensa: recuerdo familiar nº 2 |
 
 #### 🏭 Mundo 3 — **La Fábrica** (paredes gris acero / naranja)
 *Motivo: industria y movimiento forzado.*
@@ -202,7 +203,7 @@ Cada mundo tiene paleta de pared propia, una mecánica estrella que se introduce
 | 27 | Robots soldadores: chispas que bloquean un pasillo temporalmente |
 | 28 | Misión `RESCUE`: liberar a un operario de una jaula y llevarlo a la salida |
 | 29 | Laberinto en "líneas de montaje" con cintas en cadena |
-| 30 | **Jefe:** la Gran Trituradora, que avanza de un lado a otro y empuja el laberinto. Rescate de **Pac-Perro** |
+| 30 | **Jefe:** la Gran Trituradora, que avanza de un lado a otro y empuja el laberinto. Recompensa: recuerdo familiar nº 3 |
 
 #### ❄️ Mundo 4 — **Polo Helado** (paredes cian / blanco)
 *Motivo: inercia y superficies cambiantes.*
@@ -217,7 +218,7 @@ Cada mundo tiene paleta de pared propia, una mecánica estrella que se introduce
 | 37 | Hielo fino: se rompe tras pasar dos veces y se convierte en pared |
 | 38 | Misión `REACH`: llegar al iglú con ventisca |
 | 39 | Energizers congelados (hay que pasar 3 veces para liberarlos) |
-| 40 | **Jefe:** el Yeti-Fantasma, que lanza bolas de nieve en línea recta. Rescate de **Pac-Primo** |
+| 40 | **Jefe:** el Yeti-Fantasma, que lanza bolas de nieve en línea recta. Recompensa: recuerdo familiar nº 4 |
 
 #### 🏜️ Mundo 5 — **Pirámides del Desierto** (paredes doradas)
 *Motivo: secretos, oscuridad y trampas antiguas.*
@@ -232,7 +233,7 @@ Cada mundo tiene paleta de pared propia, una mecánica estrella que se introduce
 | 47 | Tormenta de arena que borra temporalmente parte del laberinto |
 | 48 | Momia-fantasma extra (lento pero invulnerable a los energizers) |
 | 49 | Misión `RESCUE` en una cámara sellada con temporizador |
-| 50 | **Jefe:** el Faraón Fantasma, que invoca momias y sella pasillos. Rescate de la **Pac-Tía** |
+| 50 | **Jefe:** el Faraón Fantasma, que invoca momias y sella pasillos. Recompensa: recuerdo familiar nº 5 |
 
 #### 🌊 Mundo 6 — **Fondo Marino** (paredes azul turquesa)
 *Motivo: corrientes y oxígeno.*
@@ -247,7 +248,7 @@ Cada mundo tiene paleta de pared propia, una mecánica estrella que se introduce
 | 57 | Laberinto que sube y baja con la marea (filas que se inundan/secan) |
 | 58 | Misión `COLLECT`: perlas en tiempo límite |
 | 59 | Corrientes + oxígeno + medusas combinados |
-| 60 | **Jefe:** el Kraken-Fantasma, cuyos tentáculos barren filas del laberinto. Rescate de **Pac-Hermano** |
+| 60 | **Jefe:** el Kraken-Fantasma, cuyos tentáculos barren filas del laberinto. Recompensa: recuerdo familiar nº 6 |
 
 #### 🌋 Mundo 7 — **Volcán** (paredes rojo / magma)
 *Motivo: peligro ambiental y suelo que desaparece.*
@@ -262,7 +263,7 @@ Cada mundo tiene paleta de pared propia, una mecánica estrella que se introduce
 | 67 | Misión `REACH`: cima del volcán con ruta cambiante |
 | 68 | Rocas rodantes que recorren pasillos largos |
 | 69 | Combinación de torretas + derrumbes |
-| 70 | **Jefe:** el Dragón de Magma, con ataques en patrón y fases. Rescate del **Pac-Abuelo** |
+| 70 | **Jefe:** el Dragón de Magma, con ataques en patrón y fases. Recompensa: recuerdo familiar nº 7 |
 
 #### 🚀 Mundo 8 — **Estación Espacial** (paredes violeta / neón)
 *Motivo: física espacial y tecnología.*
@@ -277,7 +278,7 @@ Cada mundo tiene paleta de pared propia, una mecánica estrella que se introduce
 | 77 | Drones que patrullan rutas fijas |
 | 78 | Misión `RESCUE`: astronauta a la deriva |
 | 79 | Gravedad invertida por zonas |
-| 80 | **Jefe:** la Nave Nodriza Fantasma, que lanza fantasmas por oleadas. Rescate de **Pac-Robot** |
+| 80 | **Jefe:** la Nave Nodriza Fantasma, que lanza fantasmas por oleadas. Recompensa: recuerdo familiar nº 8 |
 
 #### 🏰 Mundo 9 — **Castillo Fantasma** (paredes gris piedra / morado)
 *Motivo: el hogar de los fantasmas, con trampas y llaves.*
@@ -292,7 +293,7 @@ Cada mundo tiene paleta de pared propia, una mecánica estrella que se introduce
 | 87 | Pasadizos secretos tras cuadros (paredes falsas mejoradas) |
 | 88 | 6 fantasmas en lugar de 4 (aparecen los fantasmas extra *Sue* y *Funky*) |
 | 89 | Misión `ESCORT` del último rehén por el castillo |
-| 90 | **Jefe:** el Fantasma Rey (fase 1), con patrón de laberinto cambiante |
+| 90 | **Jefe:** el Fantasma Rey (fase 1), con patrón de laberinto cambiante. Recompensa: recuerdo familiar nº 9 |
 
 #### 👾 Mundo 10 — **El Núcleo Glitch** (paleta que se corrompe, homenaje al *kill screen* del nivel 256)
 *Motivo: todo lo aprendido, mezclado y corrompido.*
@@ -307,10 +308,32 @@ Cada mundo tiene paleta de pared propia, una mecánica estrella que se introduce
 | 97 | Gravedad + lava + oxígeno |
 | 98 | Misión `SURVIVE` contra 8 fantasmas |
 | 99 | La mitad derecha del laberinto "rota" como en el nivel 256 original, y hay que limpiarla |
-| 100 | **Jefe final:** el Fantasma Rey (forma definitiva) en 3 fases. **Rescate de Ms. Pac-Man**, cutscene final y créditos |
+| 100 | **Jefe final:** el Fantasma Rey (forma definitiva) en 3 fases. **Rescate de Cely**, reencuentro de toda la familia, cutscene final y créditos |
 
 > **Extra post-juego (opcional):** modo "Arcade Infinito" (laberinto original y reglas puras), *Time Attack* por nivel con ★, y desbloqueo de un filtro CRT/cabina.
 
+
+### 4.5 Temática familiar: Cely, Aina y Aleix (transversal a los 100 niveles)
+
+La familia no es un adorno de un mundo: está presente en **todos** los niveles, con el mismo lenguaje visual arcade (sprites de 16×16 de pocos colores).
+
+| Personaje | Rol | Aspecto (ajustable en `data/family.json`) |
+|---|---|---|
+| **Cely** (esposa) | Objetivo final del juego. Aparece en cada nivel como **mensajes y cartas** que manda a Pac-Man y como *cameo* secreto; se la rescata en el nivel 100. | Pac-Man amarillo con lazo (al estilo Ms. Pac-Man) |
+| **Aina** (hija, 12 años) | **Navegante:** ayudante con la habilidad *Pista*. Una vez por nivel (se recarga al comer una fruta) marca durante 3 s la ruta hacia el objetivo de la misión. | Pac-Man pequeño con coletas o gafas |
+| **Aleix** (hijo, 8 años) | **Travieso:** ayudante con la habilidad *Señuelo*. Una vez por nivel deja un juguete que despista unos segundos a los fantasmas más cercanos. | Pac-Man pequeño con gorra |
+
+**Presencia en cada nivel**
+1. **Tarjeta de inicio** ("NIVEL 1-1") con una frase corta de la familia (100 frases, varias por mundo, en `data/family.json`; editables y traducibles).
+2. **Ayudantes en pantalla:** Aina y Aleix aparecen en el HUD inferior con el estado de sus habilidades (listo/recargando). En táctil son dos botones grandes bajo el laberinto; en teclado `Z` y `X`; en mando, `X` e `Y`.
+3. **Cameo de Cely:** en cada nivel hay un objeto oculto (un lazo ♥) que, si se encuentra, suma bonus y desbloquea una carta de Cely en el **Álbum familiar**.
+4. **Fruta = foto familiar:** la fruta de bonus de cada nivel se dibuja como una foto familiar distinta (misma puntuación que la fruta arcade).
+5. **Intermissions:** las cutscenes entre mundos protagonizadas por la familia (parodia de las intermissions originales: Aleix persiguiendo a Aina por la pantalla, etc.).
+6. **Recuerdos de los jefes:** al derrotar al jefe de cada mundo se desbloquea un *recuerdo familiar* (9 en total, más el reencuentro final) en el Álbum.
+7. **Álbum familiar:** pantalla del menú con las fotos, cartas de Cely y logros desbloqueados. Es lo que da sentido a rejugar niveles.
+8. **Final:** el nivel 100 termina con Cely rescatada y la familia reunida; los créditos incluyen una dedicatoria personalizable.
+
+**Reglas de diseño:** los ayudantes nunca vuelven trivial el juego (una carga por nivel, sin efecto sobre jefes en su fase final y desactivables en "modo clásico"). La familia no sustituye a los personajes del arcade: Pac-Man y los fantasmas conservan su aspecto original.
 ---
 
 ## 5. Gráficos y sonido
@@ -395,6 +418,7 @@ Cada fase acaba en un hito jugable y desplegado en GitHub Pages.
 - [ ] **Validador** (conectividad, sin callejones, unicidad por hash) integrado en CI.
 - [ ] **Editor visual** de laberintos y mecánicas (`/editor`, solo en dev) con prueba instantánea.
 - [ ] Sistema de **misiones** (CLEAR, RESCUE, REACH, COLLECT, SURVIVE, HUNT, ESCORT, BOSS).
+- [ ] **Temática familiar:** `family.json` (personajes, frases por nivel, cartas), tarjeta de inicio de nivel, habilidades de Aina (*Pista*) y Aleix (*Señuelo*) con sus botones táctiles/teclado/mando, y objeto oculto de Cely por nivel (§4.5).
 - [ ] Framework de **mecánicas como plugins** (`Mechanic` con hooks `onTick`, `onEnterTile`, `modifySpeed`, `render`…).
 - [ ] Bot de simulación *headless* para balancear.
 - **Hito:** un nivel de prueba con cinta transportadora y misión RESCUE, cargado 100 % desde datos.
@@ -403,6 +427,7 @@ Cada fase acaba en un hito jugable y desplegado en GitHub Pages.
 - [ ] Menú principal, mapa de mundos (estilo arcade), selector de niveles y estrellas ★.
 - [ ] Guardado de progreso, récords por nivel y ajustes (IndexedDB/localStorage).
 - [ ] Sistema de *cutscenes* para la historia (intermissions al estilo original).
+- [ ] **Álbum familiar** (fotos, cartas de Cely, recuerdos de jefes) y desbloqueos persistentes.
 - [ ] Pausa, reintentar y continuar (vidas por mundo).
 - **Hito:** el bucle completo de juego funciona con niveles de prueba.
 
