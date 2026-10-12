@@ -30,6 +30,7 @@ const shrooms = (count: number, effects: EffectKind[] = ['wobble', 'invert', 'sc
 const phenomenon = (effect: EffectKind, everySeconds: number, durationSeconds: number): MechanicDef => ({ type: 'phenomenon', effect, everySeconds, durationSeconds });
 const mud = (count: number): MechanicDef => ({ type: 'puddle', count });
 const companion = (who: 'aleix' | 'aina', count = 1): MechanicDef => ({ type: 'companion', who, count });
+const blaster = (count = 1, seconds = 60): MechanicDef => ({ type: 'blaster', count, seconds });
 const furia = (count = 1, seconds = 6): MechanicDef => ({ type: 'rage', count, seconds });
 const bolt = (count = 1, seconds = 60): MechanicDef => ({ type: 'boost', count, seconds });
 
@@ -183,4 +184,13 @@ for (let n = 6; n <= 100; n++) {
   if (helpers.length === 0) continue;
   const entry = (LEVEL_SPECIALS[n] ??= {});
   entry.mechanics = [...(entry.mechanics ?? []), ...helpers];
+}
+
+/**
+ * Blasters (1 minuto de disparos): en los niveles 7, 12, 17… y en el último. Se añaden a lo que ya
+ * tenga el nivel; en la segunda mitad del juego hay dos.
+ */
+for (const n of [...Array.from({ length: 19 }, (_, i) => 7 + i * 5), 100]) {
+  const entry = (LEVEL_SPECIALS[n] ??= {});
+  entry.mechanics = [...(entry.mechanics ?? []), blaster(n >= 50 ? 2 : 1)];
 }

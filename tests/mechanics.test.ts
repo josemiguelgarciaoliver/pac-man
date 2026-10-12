@@ -8,7 +8,9 @@ import { Maze } from '../src/game/maze/maze';
 import { createMechanics } from '../src/game/mechanics';
 import { BombMechanic } from '../src/game/mechanics/bomb';
 import { CompanionMechanic } from '../src/game/mechanics/companion';
+import { BlasterMechanic } from '../src/game/mechanics/blaster';
 import { BoostMechanic } from '../src/game/mechanics/boost';
+import { Projectiles } from '../src/game/projectiles';
 import { GateMechanic } from '../src/game/mechanics/gate';
 import type { MechanicEnv } from '../src/game/mechanics/mechanic';
 import { MushroomMechanic } from '../src/game/mechanics/mushroom';
@@ -498,5 +500,62 @@ describe('miniaturas de Aleix y Aina', () => {
     again.s.run(1);
     for (const m of again.s.mechanics) m.onRespawn?.(again.s.env);
     expect(again.c.active).toBeNull();
+  });
+});
+
+describe('blaster y disparos', () => {
+  it('coger el blaster activa el disparo durante un minuto con aviso', () => {
+    const s = setup(7);
+    const gun = s.mechanics.find((m) => m instanceof BlasterMechanic) as BlasterMechanic;
+    expect(gun).toBeDefined();
+    const tile = gun.tiles[0];
+    expect(s.view.has('gun')).toBe(false);
+    s.place(tile.col, tile.row);
+    s.run(1);
+    expect(s.view.has('gun')).toBe(true);
+    expect(s.view.secondsLeft('gun')).toBe(60);
+    expect(s.popups.some((p) => p.includes('ESPACIO'))).toBe(true);
+  });
+
+  it('un disparo mata al primer fantasma de su camino y no atraviesa paredes', () => {
+    const s = setup(1);
+    const shots = new Projectiles();
+    const kills: string[] = [];
+    // Pasillo de la fila 5, libre de lado a lado.
+    s.ghosts.forEach((g) => (g.state = 'house'));
+    const target = s.ghosts[1];
+    target.state = 'active';
+    target.x = cx(20);
+    target.y = cx(5);
+    const behind = s.ghosts[2];
+    behind.state = 'active';
+    behind.x = cx(24);
+    behind.y = cx(5);
+    expect(shots.tryFire(cx(8), cx(5), Dir.Right)).toBe(true);
+    for (let t = 0; t < 60; t++) shots.update(s.maze, s.ghosts, (g) => kills.push(g.name));
+    expect(kills).toEqual(['pinky']); // el que está detrás no se toca: el disparo se gasta con el primero
+    expect(shots.count).toBe(0);
+
+    // Contra una pared el disparo desaparece.
+    const wallShots = new Projectiles();
+    wallShots.tryFire(cx(1), cx(5), Dir.Left);
+    for (let t = 0; t < 10; t++) wallShots.update(s.maze, s.ghosts, () => {});
+    expect(wallShots.count).toBe(0);
+  });
+
+  it('el cañón se enfría entre disparos', () => {
+    const s = setup(1);
+    const shots = new Projectiles();
+    expect(shots.tryFire(cx(8), cx(5), Dir.Right)).toBe(true);
+    expect(shots.tryFire(cx(8), cx(5), Dir.Right)).toBe(false);
+    for (let t = 0; t < 20; t++) shots.update(s.maze, s.ghosts, () => {});
+    expect(shots.tryFire(cx(8), cx(5), Dir.Right)).toBe(true);
+  });
+
+  it('hay un blaster cada cinco niveles desde el 7, y en el último', () => {
+    const levels = Array.from({ length: 100 }, (_, i) => i + 1).filter((n) => buildLevel(n).mechanics.some((m) => m.type === 'blaster'));
+    expect(levels.slice(0, 4)).toEqual([7, 12, 17, 22]);
+    expect(levels).toContain(100);
+    expect(levels).toHaveLength(20);
   });
 });

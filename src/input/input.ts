@@ -43,6 +43,8 @@ export class Input {
   private muteRequested = false;
   private ainaRequested = false;
   private aleixRequested = false;
+  private fireRequested = false;
+  private padFireDown = false;
   private padHelperDown = [false, false];
   private touchStart: { id: number; x: number; y: number } | null = null;
   private padWasDown = false;
@@ -59,6 +61,7 @@ export class Input {
       if (e.code === 'KeyM') this.muteRequested = true;
       if (e.code === 'KeyZ') this.ainaRequested = true;
       if (e.code === 'KeyX') this.aleixRequested = true;
+      if (e.code === 'Space' || e.code === 'KeyF') this.fireRequested = true;
       this.pressed = true;
     });
 
@@ -110,6 +113,10 @@ export class Input {
     if (helpers[0] && !this.padHelperDown[0]) this.ainaRequested = true;
     if (helpers[1] && !this.padHelperDown[1]) this.aleixRequested = true;
     this.padHelperDown = helpers;
+    // B o gatillo derecho → disparar
+    const fire = b(1) || b(7);
+    if (fire && !this.padFireDown) this.fireRequested = true;
+    this.padFireDown = fire;
   }
 
   /** ¿Se pulsó algo desde la última consulta? (para pantallas de título) */
@@ -121,6 +128,16 @@ export class Input {
 
   requestPause(): void {
     this.pauseRequested = true;
+  }
+
+  requestFire(): void {
+    this.fireRequested = true;
+  }
+
+  consumeFire(): boolean {
+    const f = this.fireRequested;
+    this.fireRequested = false;
+    return f;
   }
 
   requestAina(): void {

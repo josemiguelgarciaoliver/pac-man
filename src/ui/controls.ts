@@ -26,7 +26,7 @@ type FullscreenEl = HTMLElement & { webkitRequestFullscreen?: () => void };
  * Controles en pantalla: cruceta virtual, pausa, sonido, modo de control y pantalla completa.
  * Solo habla con `Input` y `AudioManager`; el juego no sabe que existen.
  */
-export function setupControls(input: Input, audio: AudioManager): { update(helpers: { aina: boolean; aleix: boolean }): void } {
+export function setupControls(input: Input, audio: AudioManager): { update(helpers: { aina: boolean; aleix: boolean; fire: boolean }): void } {
   const app = document.getElementById('app')!;
   const dpad = document.getElementById('dpad')!;
   const controls = document.getElementById('controls')!;
@@ -108,6 +108,8 @@ export function setupControls(input: Input, audio: AudioManager): { update(helpe
   // ── Habilidades de los hijos ──
   const btnAina = document.getElementById('btn-aina')!;
   const btnAleix = document.getElementById('btn-aleix')!;
+  const btnFire = document.getElementById('btn-fire')!;
+  btnFire.addEventListener('click', () => input.requestFire());
   btnAina.addEventListener('click', () => input.requestAina());
   btnAleix.addEventListener('click', () => input.requestAleix());
 
@@ -135,6 +137,7 @@ export function setupControls(input: Input, audio: AudioManager): { update(helpe
   btnPause.innerHTML = ICONS.pause;
   return {
     update(helpers) {
+      btnFire.classList.toggle('used', !helpers.fire);
       btnAina.classList.toggle('used', !helpers.aina);
       btnAleix.classList.toggle('used', !helpers.aleix);
       if (lastMuted !== audio.muted) {

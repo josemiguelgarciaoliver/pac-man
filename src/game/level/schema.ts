@@ -90,6 +90,12 @@ export const mechanicSchema = z.discriminatedUnion('type', [
     everySeconds: z.number().min(6).max(90),
     durationSeconds: z.number().min(3).max(40),
   }),
+  /** Blaster: Pac-Man puede disparar a los fantasmas (1 minuto por defecto). */
+  z.object({
+    type: z.literal('blaster'),
+    count: z.number().int().min(1).max(3),
+    seconds: z.number().min(10).max(120).default(60),
+  }),
   /** Insignias de Aleix o Aina: invocan una miniatura que caza fantasmas unos segundos. */
   z.object({
     type: z.literal('companion'),

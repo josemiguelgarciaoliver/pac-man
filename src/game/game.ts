@@ -18,6 +18,7 @@ import { Maze } from './maze/maze';
 import { WallRenderer } from './maze/render';
 import { createMechanics, type Mechanic, type MechanicEnv } from './mechanics';
 import { Mission } from './missions';
+import { Projectiles } from './projectiles';
 import { createRng, type Rng } from './random';
 import { DIFFICULTIES, DIFFICULTY_PRESETS, FRUIT_POINTS, GHOST_POINTS, GLOBAL_RELEASE, fruitForLevel, getLevelRules, type Difficulty, type LevelRules } from './rules';
 import { drawFruit, drawGhost, drawPac, drawPacDeath, type GhostLook } from './sprites';
@@ -93,6 +94,7 @@ export class Game {
   private mechanics: Mechanic[] = [];
   private helpers = new FamilyHelpers();
   private view = new ViewEffects();
+  private projectiles = new Projectiles();
   private seenDirectionSeq = 0;
   /** Últimas posiciones de Pac-Man (para la estela de la supervelocidad). */
   private pacTrail: { x: number; y: number }[] = [];
@@ -167,6 +169,7 @@ export class Game {
     const pauseRequested = this.input.consumePause();
     const ainaRequested = this.input.consumeAina();
     const aleixRequested = this.input.consumeAleix();
+    const fireRequested = this.input.consumeFire();
 
     switch (this.state) {
       case 'title':
@@ -183,6 +186,7 @@ export class Game {
         }
         if (ainaRequested) this.useAina();
         if (aleixRequested) this.useAleix();
+        if (fireRequested && this.view.has('gun') && this.projectiles.tryFire(this.pac.x, this.pac.y, this.pac.dir)) this.audio.sfx('shoot');
         this.updatePlay();
         break;
       case 'ghostEaten':
@@ -214,8 +218,8 @@ export class Game {
   }
 
   /** Estado de las habilidades de los hijos (para los botones en pantalla). */
-  helperState(): { aina: boolean; aleix: boolean } {
-    return { aina: this.helpers.ainaReady, aleix: this.helpers.aleixReady };
+  helperState(): { aina: boolean; aleix: boolean; fire: boolean } {
+    return { aina: this.helpers.ainaReady, aleix: this.helpers.aleixReady, fire: this.view.has('gun') };
   }
 
   /** Título: arriba/abajo eligen nueva partida o continuar; izquierda/derecha cambian la dificultad. */
@@ -375,6 +379,7 @@ export class Game {
     this.eatenGhost = null;
     this.timeUp = false;
     this.view.clear();
+    this.projectiles.clear();
     if (!newLevel) for (const m of this.mechanics) m.onRespawn?.(this.mechanicEnv());
     this.initBlinky();
     this.audio.setAmbient(null);
@@ -478,6 +483,7 @@ export class Game {
     const env = this.mechanicEnv();
     for (const m of this.mechanics) m.update(env);
     this.syncWalls();
+    this.projectiles.update(this.maze, this.ghosts, (gh) => this.killGhostByHazard(gh));
     if (this.mechanics.some((m) => m.hitsPac?.(this.pac))) {
       this.killPac();
       return;
@@ -758,6 +764,7 @@ export class Game {
     if (this.fruitTicks > 0 && this.state !== 'clear') drawFruit(ctx, this.rules.fruit, FRUIT_X, MAZE_TOP + FRUIT_Y);
     this.helpers.draw(ctx, this.frame);
     if (this.state !== 'clear') for (const m of this.mechanics) m.drawOver?.(ctx, this.frame);
+    this.projectiles.draw(ctx);
 
     const hideGhosts = this.state === 'clear' || (this.state === 'dying' && this.timer >= DEATH_FREEZE);
     if (!hideGhosts) this.drawGhosts(ctx);

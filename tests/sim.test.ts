@@ -26,7 +26,7 @@ class FakeInput {
     this.dir = d;
     if (d !== null) this.directionSeq++;
   }
-  private flags = { press: false, pause: false, mute: false, aina: false, aleix: false };
+  private flags = { press: false, pause: false, mute: false, aina: false, aleix: false, fire: false };
   poll() {}
   consumePress() {
     const v = this.flags.press;
@@ -41,6 +41,11 @@ class FakeInput {
   consumeMute() {
     return false;
   }
+  consumeFire() {
+    const v = this.flags.fire;
+    this.flags.fire = false;
+    return v;
+  }
   consumeAina() {
     const v = this.flags.aina;
     this.flags.aina = false;
@@ -54,7 +59,7 @@ class FakeInput {
   press() {
     this.flags.press = true;
   }
-  request(kind: 'aina' | 'aleix') {
+  request(kind: 'aina' | 'aleix' | 'fire') {
     this.flags[kind] = true;
   }
 }
