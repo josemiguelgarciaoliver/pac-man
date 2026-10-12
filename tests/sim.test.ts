@@ -63,6 +63,9 @@ class FakeInput {
   press() {
     this.flags.press = true;
   }
+  pause() {
+    this.flags.pause = true;
+  }
   request(kind: 'aina' | 'aleix' | 'fire') {
     this.flags[kind] = true;
   }
@@ -171,18 +174,19 @@ describe('checkpoints en el juego', () => {
     expect(JSON.parse(storage.getItem('pacman.checkpoint')!)).toMatchObject({ level: 3, score: 4560 });
   });
 
-  it('el título ofrece continuar y reanuda con puntuación y nivel guardados', () => {
+  it('el menú ofrece continuar (preseleccionado) y reanuda con puntuación y nivel guardados', () => {
     const storage = memoryStorage();
     storage.setItem('pacman.checkpoint', JSON.stringify({ level: 7, score: 9000, lives: 0, difficulty: 'normal' }));
     const { game, input, probe } = newGame(1, storage, false);
-    const g = game as unknown as Internals;
-    expect(g.titleChoice).toBe(1); // preseleccionado
-    input.direction = Dir.Up; // cambia a «nueva partida» y vuelve
+    const g = game as unknown as Internals & { menus: { mainIndex: number; screen: string } };
+    expect(g.menus.screen).toBe('main');
+    expect(g.menus.mainIndex).toBe(1); // "Continuar"
+    input.direction = Dir.Up; // sube a "Nueva partida" y vuelve a bajar
     game.update();
-    expect(g.titleChoice).toBe(0);
+    expect(g.menus.mainIndex).toBe(0);
     input.direction = Dir.Down;
     game.update();
-    expect(g.titleChoice).toBe(1);
+    expect(g.menus.mainIndex).toBe(1);
     input.press();
     game.update();
     expect(probe.level).toBe(7);
@@ -211,5 +215,115 @@ describe('checkpoints en el juego', () => {
     const g = game as unknown as Internals;
     g.nextLevel();
     expect(storage.getItem('pacman.checkpoint')).toBeNull();
+  });
+});
+
+describe('progresión en el juego (Fase 6)', () => {
+  type Run = Probe & {
+    completeLevel(): void;
+    nextLevel(): void;
+    levelPlayTicks: number;
+    levelLivesLost: number;
+    levelStartScore: number;
+    lives: number;
+    progress: { levels: Record<string, { stars: number; bestScore: number }>; unlocked: number; album: string[] };
+    menus: { screen: string };
+  };
+
+  const untilPlay = (game: { update(): void }, probe: Probe) => {
+    for (let i = 0; i < 1500 && probe.state !== 'play'; i++) game.update();
+    expect(probe.state).toBe('play');
+  };
+
+  it('completar un nivel rápido y sin perder vidas da 3 estrellas y lo guarda', () => {
+    const storage = memoryStorage();
+    const { game } = newGame(3, storage);
+    const g = game as unknown as Run;
+    g.levelPlayTicks = 60 * 20;
+    g.completeLevel();
+    expect(g.progress.levels['3'].stars).toBe(3);
+    expect(g.progress.unlocked).toBe(4);
+    expect(JSON.parse(storage.getItem('pacman.progress')!).unlocked).toBe(4);
+  });
+
+  it('perder una vida en el nivel deja solo una estrella', () => {
+    const { game } = newGame(3, memoryStorage());
+    const g = game as unknown as Run;
+    g.levelLivesLost = 1;
+    g.levelPlayTicks = 60 * 10;
+    g.completeLevel();
+    expect(g.progress.levels['3'].stars).toBe(1);
+  });
+
+  it('completar el nivel 10 desbloquea el álbum, lanza la escena y el mundo 2 empieza con las vidas recargadas', () => {
+    const { game, input, probe } = newGame(10, memoryStorage());
+    const g = game as unknown as Run;
+    g.lives = 0;
+    g.completeLevel();
+    expect(g.progress.album).toContain('letter-1');
+    expect(g.progress.album).toContain('memory-1');
+    g.nextLevel();
+    expect(probe.state).toBe('cutscene');
+    // Al principio no se puede saltar.
+    input.press();
+    game.update();
+    expect(probe.state).toBe('cutscene');
+    for (let i = 0; i < 100; i++) game.update();
+    input.press();
+    game.update();
+    expect(probe.state).toBe('ready');
+    expect(probe.level).toBe(11);
+    expect(g.lives).toBe(4); // vidas del modo fácil
+  });
+
+  it('el menú de pausa permite continuar, reintentar el nivel y salir al menú', () => {
+    const { game, input, probe } = newGame(2, memoryStorage());
+    const g = game as unknown as Run;
+    untilPlay(game, probe);
+
+    // Continuar con la misma tecla de pausa.
+    input.pause();
+    game.update();
+    expect(probe.state).toBe('paused');
+    input.pause();
+    game.update();
+    expect(probe.state).toBe('play');
+
+    // Reintentar: vuelve a "ready" con la puntuación de inicio del nivel.
+    probe.score = 1234;
+    input.pause();
+    game.update();
+    input.direction = Dir.Down;
+    game.update();
+    input.press();
+    game.update();
+    expect(probe.state).toBe('ready');
+    expect(probe.score).toBe(g.levelStartScore);
+    expect(probe.level).toBe(2);
+
+    // Salir al menú.
+    untilPlay(game, probe);
+    input.pause();
+    game.update();
+    input.direction = Dir.Down;
+    game.update();
+    input.direction = Dir.Down;
+    game.update();
+    input.press();
+    game.update();
+    expect(probe.state).toBe('title');
+    expect(g.menus.screen).toBe('main');
+  });
+
+  it('reiniciar el progreso borra estrellas y álbum', () => {
+    const storage = memoryStorage();
+    const { game } = newGame(10, storage);
+    const g = game as unknown as Run & { menuHost(): { resetProgress(): void } };
+    g.completeLevel();
+    expect(g.progress.unlocked).toBe(11);
+    g.menuHost().resetProgress();
+    expect(g.progress.unlocked).toBe(1);
+    expect(g.progress.album).toEqual([]);
+    expect(storage.getItem('pacman.progress')).toBeNull();
   });
 });

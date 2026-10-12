@@ -39,12 +39,24 @@ export function drawFace(ctx: CanvasRenderingContext2D, who: FamilyMember, r: nu
   ctx.beginPath();
   ctx.arc(0, 0, r, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = who === 'aina' ? '#5a3418' : '#6a4420';
+  ctx.fillStyle = who === 'aina' ? '#5a3418' : who === 'cely' ? '#4a2c1c' : '#6a4420';
   ctx.beginPath();
   ctx.arc(0, -r * 0.1, r * 1.02, Math.PI * 1.08, Math.PI * 1.92);
   ctx.lineTo(0, -r * 0.2);
   ctx.closePath();
   ctx.fill();
+  if (who === 'cely') {
+    // Melena larga a los lados y lazo rosa.
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.92, r * 0.35, r * 0.26, r * 0.78, 0, 0, Math.PI * 2);
+    ctx.ellipse(r * 0.92, r * 0.35, r * 0.26, r * 0.78, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ff5fa8';
+    ctx.beginPath();
+    ctx.arc(r * 0.55, -r * 0.85, r * 0.26, 0, Math.PI * 2);
+    ctx.arc(r * 0.95, -r * 0.7, r * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
   if (who === 'aina') {
     // Coletas y lazo.
     ctx.beginPath();

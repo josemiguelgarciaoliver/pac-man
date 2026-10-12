@@ -496,12 +496,12 @@ Cada fase acaba en un hito jugable y desplegado en GitHub Pages.
 - **Hito:** conseguido: los niveles 21–29 (cintas), 25 (tuercas), 28 (cintas + RESCUE) y otros se cargan 100 % desde datos.
 
 ### Fase 6 — Progresión, menús y persistencia
-- [ ] Menú principal, mapa de mundos (estilo arcade), selector de niveles y estrellas ★.
-- [ ] Guardado de progreso, récords por nivel y ajustes (IndexedDB/localStorage).
-- [ ] Sistema de *cutscenes* para la historia (intermissions al estilo original).
-- [ ] **Álbum familiar** (fotos, cartas de Cely, recuerdos de jefes) y desbloqueos persistentes.
-- [~] Pausa y **checkpoints**: se guarda un checkpoint al completar cada nivel par (nivel, puntuación, vidas y dificultad en localStorage); el título ofrece *Nueva partida* o *Continuar nivel N* y al terminar el juego se borra. Pendiente: reintentar nivel y vidas por mundo.
-- **Hito:** el bucle completo de juego funciona con niveles de prueba.
+- [x] Menú principal (nueva partida, continuar, seleccionar nivel, álbum, ajustes), **mapa de mundos** (10 mundos en dos columnas con su emblema y estrellas), selector de niveles con ★/★★/★★★ y ficha del nivel (misión, mejor puntuación y tiempo).
+- [x] Guardado de progreso (nivel desbloqueado, estrellas, mejor puntuación y tiempo por nivel, álbum) y ajustes (dificultad, sonido, partículas, borrar progreso con doble confirmación) en localStorage, a prueba de datos corruptos. *(IndexedDB no hizo falta.)*
+- [x] **Escenas entre mundos** (al completar los niveles 10, 20…): Pac-Man gigante persigue a los fantasmas asustados con Aina y Aleix detrás, y aparece la carta de Cely desbloqueada. Se pueden saltar.
+- [x] **Álbum familiar**: 10 cartas de Cely y 10 recuerdos que se desbloquean al completar cada mundo; texto editable en `data/album.ts`. *(El objeto oculto de Cely por nivel sigue pendiente.)*
+- [x] Pausa con menú (continuar, **reintentar nivel**, salir al menú), **checkpoints** cada 2 niveles y **vidas recargadas** al empezar cada mundo.
+- **Hito:** conseguido: el bucle completo de juego (menú → mapa → nivel → estrellas → escena → siguiente mundo) funciona con los 100 niveles.
 
 ### Fase 7 — Contenido: Mundos 1–3
 - [ ] 30 laberintos (generados, curados y validados).

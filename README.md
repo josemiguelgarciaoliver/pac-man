@@ -37,7 +37,9 @@ temática familiar (Cely, Aina y Aleix). Pendientes: editor de laberintos, jefes
 
 **Mundos:** cada uno tiene su estilo de paredes, suelo, partículas, puntos y laberintos, y hay niveles muy raros (como la sala sin paredes del nivel 9). La dificultad sube sin parar hasta el nivel 100, que es casi imposible.
 
+**Progreso (Fase 6):** menú principal, mapa de mundos, selector de niveles con estrellas (★ completar, ★★ sin perder vidas, ★★★ además rápido), récords por nivel, ajustes, álbum familiar con 20 cartas y recuerdos, escenas entre mundos y menú de pausa con reintento. Las vidas se recargan al empezar cada mundo.
+
 **Checkpoints:** cada 2 niveles completados (2, 4, 6…) el progreso se guarda en el navegador; en el título se elige *Continuar*.
 
-Parámetros útiles: `/?autostart&level=28` empieza en un nivel concreto; `/?touch` fuerza el diseño táctil; `/?quick` salta la tarjeta de nivel (pruebas). Teclas: `Z` Aina, `X` Aleix, `Espacio` disparar.
+Parámetros útiles: `/?autostart&level=28` empieza en un nivel concreto; `/?touch` fuerza el diseño táctil; `/?quick` salta la tarjeta de nivel; `/?menu=worlds|levels|album|settings` y `/?cutscene=<tick>` abren esas pantallas (pruebas). Teclas: `Z` Aina, `X` Aleix, `Espacio` disparar.
 Regenerar los laberintos: `npm run generate:mazes`.

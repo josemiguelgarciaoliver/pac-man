@@ -45,6 +45,8 @@ export class Input {
   private aleixRequested = false;
   private fireRequested = false;
   private padFireDown = false;
+  private padHeld: Dir | null = null;
+  private padHeldTicks = 0;
   private padHelperDown = [false, false];
   private touchStart: { id: number; x: number; y: number } | null = null;
   private padWasDown = false;
@@ -94,10 +96,16 @@ export class Input {
     const b = (i: number) => pad.buttons[i]?.pressed ?? false;
     const ax = pad.axes[0] ?? 0;
     const ay = pad.axes[1] ?? 0;
-    if (b(12) || ay < -0.5) this.direction = Dir.Up;
-    else if (b(13) || ay > 0.5) this.direction = Dir.Down;
-    else if (b(14) || ax < -0.5) this.direction = Dir.Left;
-    else if (b(15) || ax > 0.5) this.direction = Dir.Right;
+    let held: Dir | null = null;
+    if (b(12) || ay < -0.5) held = Dir.Up;
+    else if (b(13) || ay > 0.5) held = Dir.Down;
+    else if (b(14) || ax < -0.5) held = Dir.Left;
+    else if (b(15) || ax > 0.5) held = Dir.Right;
+    // Una dirección mantenida se repite cada 14 ticks (así los menús no saltan 60 veces por segundo).
+    if (held === null) this.padHeldTicks = 0;
+    else if (held !== this.padHeld || this.padHeldTicks % 14 === 0) this.direction = held;
+    if (held !== null) this.padHeldTicks++;
+    this.padHeld = held;
 
     const a = b(0);
     if (a && !this.padWasDown) this.pressed = true;

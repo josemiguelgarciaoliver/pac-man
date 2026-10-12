@@ -1,7 +1,8 @@
 import type { AudioManager } from '../audio/audio';
+import { ALBUM } from '../data/album';
 import { FAMILY, levelPhrase } from '../data/family';
 import { ORIGINAL_PAC_SPAWN } from '../data/mazes/original';
-import { TOTAL_LEVELS } from '../data/worlds';
+import { LEVELS_PER_WORLD, TOTAL_LEVELS } from '../data/worlds';
 import { CHAR_W, drawText, drawTextCentered, drawTextRight } from '../engine/font';
 import type { Input } from '../input/input';
 import { HOUSE_DOOR_TILE, SCATTER_TARGETS, chaseTarget, type GhostName, type Tile } from './actors/ai';
@@ -9,6 +10,7 @@ import { Ghost, type MoveEnv } from './actors/ghost';
 import { PacMan } from './actors/pacman';
 import { BASE_SPEED, COLORS, Dir, MAZE_TOP, SCREEN_H, SCREEN_W, TICK_RATE, TILE } from './constants';
 import { CHECKPOINT_MIN_LIVES, clearCheckpoint, isCheckpointLevel, loadCheckpoint, saveCheckpoint, type Checkpoint } from './checkpoint';
+import { CUTSCENE_SKIP_AFTER, CUTSCENE_TICKS, drawCutscene } from './cutscene';
 import { FamilyHelpers } from './familyHelpers';
 import { arcadeEquivalent } from './level/curve';
 import { buildLevel } from './level/levels';
@@ -21,19 +23,21 @@ import { drawParticles, renderBackground } from './theme/background';
 import { drawEmblem } from './theme/emblems';
 import { drawPelletShape } from './theme/pelletShapes';
 import { themeOfWorld, type WorldTheme } from './theme/worldThemes';
+import { Menus, drawStars, formatTime, type MenuHost } from './menus';
 import { Mission } from './missions';
+import { clearProgress, emptyProgress, loadProgress, loadSettings, parSeconds, recordLevel, saveProgress, saveSettings, type Progress, type RecordOutcome, type Settings } from './progress';
 import { Projectiles } from './projectiles';
 import { createRng, type Rng } from './random';
-import { DIFFICULTIES, DIFFICULTY_PRESETS, FRUIT_POINTS, GHOST_POINTS, GLOBAL_RELEASE, fruitForLevel, getLevelRules, type Difficulty, type LevelRules } from './rules';
+import { DIFFICULTY_PRESETS, FRUIT_POINTS, GHOST_POINTS, GLOBAL_RELEASE, fruitForLevel, getLevelRules, type Difficulty, type LevelRules } from './rules';
 import { drawFruit, drawGhost, drawPac, drawPacDeath, type GhostLook } from './sprites';
 import { EFFECT_INFO, ViewEffects } from './viewEffects';
 
-type State = 'title' | 'ready' | 'play' | 'ghostEaten' | 'dying' | 'clear' | 'gameover' | 'victory' | 'paused';
+type State = 'title' | 'cutscene' | 'ready' | 'play' | 'ghostEaten' | 'dying' | 'clear' | 'gameover' | 'victory' | 'paused';
 
 const READY_TICKS = 2 * TICK_RATE;
 /** La tarjeta de nivel se ve antes del "READY!" final. */
 const CARD_TICKS = 150;
-const CLEAR_TICKS = 2 * TICK_RATE;
+const CLEAR_TICKS = 3 * TICK_RATE;
 const GHOST_EATEN_TICKS = TICK_RATE;
 const DEATH_FREEZE = 45;
 const DEATH_FRAME_TICKS = 8;
@@ -131,10 +135,21 @@ export class Game {
   private quick = false;
   /** Último checkpoint guardado (se carga al abrir el juego). */
   private checkpoint: Checkpoint | null = loadCheckpoint();
-  /** Opción elegida en el título: 0 = nueva partida, 1 = continuar. */
-  private titleChoice = this.checkpoint ? 1 : 0;
   /** El nivel que se acaba de completar guardó un checkpoint (para avisar en pantalla). */
   private checkpointJustSaved = false;
+  /** Progreso guardado (estrellas, récords, álbum) y ajustes. */
+  private progress: Progress = loadProgress();
+  private settings: Settings = loadSettings();
+  private menus!: Menus;
+  private menuSeenSeq = 0;
+  private pauseIndex = 0;
+  /** Estadísticas del nivel en curso, para las estrellas y los récords. */
+  private levelStartScore = 0;
+  private levelLivesLost = 0;
+  private levelPlayTicks = 0;
+  private lastOutcome: RecordOutcome | null = null;
+  private lastSeconds = 0;
+  private cutsceneUnlocked: string[] = [];
 
   // Modos de los fantasmas
   private modeIndex = 0;
@@ -158,8 +173,20 @@ export class Game {
     private readonly audio: AudioManager,
   ) {
     this.loadLevel(1);
+    this.menus = new Menus(this.menuHost());
+    this.menus.reset();
+    this.syncMenuInput();
     const params = new URLSearchParams(location.search);
     this.quick = params.has('quick');
+    // Depuración: ?menu=worlds|levels|album|settings (&world=N) y ?cutscene=<tick> abren esas pantallas directamente.
+    const menu = params.get('menu');
+    if (menu) this.menus.open(menu, Number(params.get('world')) || 1);
+    if (params.has('cutscene')) {
+      this.loadLevel((Number(params.get('world')) || 1) * 10);
+      this.cutsceneUnlocked = ['CARTA DE CELY 1', 'RECUERDO 1: PICNIC'];
+      this.state = 'cutscene';
+      this.timer = Number(params.get('cutscene')) || 0;
+    }
     // ?autostart salta la pantalla de título; ?level=N empieza en ese nivel (pruebas y capturas).
     if (params.has('autostart')) this.startGame(Number(params.get('level')) || 1);
   }
@@ -180,7 +207,7 @@ export class Game {
     switch (this.state) {
       case 'title':
         this.audio.setAmbient(null);
-        this.updateTitle(pressed);
+        this.menus.update(this.menuInput(pressed, pauseRequested));
         break;
       case 'ready':
         if (--this.timer <= 0) this.state = 'play';
@@ -206,19 +233,20 @@ export class Game {
         if (--this.timer <= 0) this.nextLevel();
         break;
       case 'gameover':
-        if (--this.timer <= 0) {
-          this.titleChoice = this.checkpoint ? 1 : 0;
-          this.state = 'title';
+        if (--this.timer <= 0) this.toMenu();
+        break;
+      case 'cutscene':
+        this.timer++;
+        if (this.timer >= CUTSCENE_TICKS || (pressed && this.timer >= CUTSCENE_SKIP_AFTER)) {
+          this.level++;
+          this.startLevel();
         }
         break;
       case 'victory':
-        if (--this.timer <= 0 || (pressed && this.timer < VICTORY_TICKS - 120)) this.state = 'title';
+        if (--this.timer <= 0 || (pressed && this.timer < VICTORY_TICKS - 120)) this.toMenu();
         break;
       case 'paused':
-        if (pauseRequested) {
-          this.state = this.resumeState;
-          this.audio.resume();
-        }
+        this.updatePauseMenu(pressed, pauseRequested);
         break;
     }
   }
@@ -228,31 +256,103 @@ export class Game {
     return { aina: this.helpers.ainaReady, aleix: this.helpers.aleixReady, fire: this.view.has('gun') };
   }
 
-  /** Título: arriba/abajo eligen nueva partida o continuar; izquierda/derecha cambian la dificultad. */
-  private updateTitle(pressed: boolean): void {
-    const dir = this.input.direction;
-    if (this.checkpoint && (dir === Dir.Up || dir === Dir.Down)) {
-      this.titleChoice = this.titleChoice === 0 ? 1 : 0;
-      this.input.direction = null;
+  /** Lo que ven los menús del juego (con getters, para que siempre lean el valor actual). */
+  private menuHost(): MenuHost {
+    const self = this;
+    return {
+      get progress() {
+        return self.progress;
+      },
+      get settings() {
+        return self.settings;
+      },
+      get checkpoint() {
+        return self.checkpoint;
+      },
+      get difficulty() {
+        return self.difficulty;
+      },
+      get muted() {
+        return self.audio.muted;
+      },
+      get high() {
+        return self.high;
+      },
+      get frame() {
+        return self.frame;
+      },
+      startAt: (level) => this.startGame(level),
+      continueGame: () => {
+        if (this.checkpoint) this.continueGame(this.checkpoint);
+      },
+      setDifficulty: (d) => {
+        this.difficulty = d;
+        try {
+          localStorage.setItem(DIFFICULTY_KEY, d);
+        } catch {
+          /* sin almacenamiento */
+        }
+      },
+      toggleMute: () => this.audio.toggleMute(),
+      setParticles: (on) => {
+        this.settings = { ...this.settings, particles: on };
+        saveSettings(this.settings);
+      },
+      resetProgress: () => {
+        clearProgress();
+        clearCheckpoint();
+        this.progress = emptyProgress();
+        this.checkpoint = null;
+        this.menus.reset();
+      },
+    };
+  }
+
+  /** Descarta las pulsaciones de dirección anteriores: los menús solo reaccionan a las nuevas. */
+  private syncMenuInput(): void {
+    this.menuSeenSeq = this.input.directionSeq;
+  }
+
+  /** Convierte las pulsaciones en una entrada de menú (cada dirección cuenta una sola vez). */
+  private menuInput(pressed: boolean, back: boolean): { dir: Dir | null; confirm: boolean; back: boolean } {
+    let dir: Dir | null = null;
+    if (this.input.directionSeq !== this.menuSeenSeq) {
+      this.menuSeenSeq = this.input.directionSeq;
+      dir = this.input.direction;
+    }
+    return { dir, confirm: pressed && dir === null && !back, back };
+  }
+
+  /** Vuelve al menú principal. */
+  private toMenu(): void {
+    this.audio.setAmbient(null);
+    this.menus.reset();
+    this.syncMenuInput();
+    this.state = 'title';
+  }
+
+  private updatePauseMenu(pressed: boolean, back: boolean): void {
+    const inp = this.menuInput(pressed, back);
+    if (inp.back) {
+      this.state = this.resumeState;
+      this.audio.resume();
       return;
     }
-    if (dir === Dir.Left || dir === Dir.Right) {
-      const i = DIFFICULTIES.indexOf(this.difficulty);
-      const n = DIFFICULTIES.length;
-      this.difficulty = DIFFICULTIES[(i + (dir === Dir.Right ? 1 : n - 1)) % n];
-      this.input.direction = null;
-      try {
-        localStorage.setItem(DIFFICULTY_KEY, this.difficulty);
-      } catch {
-        /* sin almacenamiento */
-      }
-      return;
+    const n = 3;
+    if (inp.dir === Dir.Up) this.pauseIndex = (this.pauseIndex + n - 1) % n;
+    else if (inp.dir === Dir.Down) this.pauseIndex = (this.pauseIndex + 1) % n;
+    else if (inp.confirm) {
+      this.audio.resume();
+      if (this.pauseIndex === 0) this.state = this.resumeState;
+      else if (this.pauseIndex === 1) this.retryLevel();
+      else this.toMenu();
     }
-    if (dir !== null) this.input.direction = null;
-    if (pressed && dir === null) {
-      if (this.checkpoint && this.titleChoice === 1) this.continueGame(this.checkpoint);
-      else this.startGame(1);
-    }
+  }
+
+  /** Reintenta el nivel actual desde el principio, con la puntuación que traía. */
+  private retryLevel(): void {
+    this.score = this.levelStartScore;
+    this.startLevel();
   }
 
   /** Pausa automática al perder el foco (no hace nada si no se está jugando). */
@@ -263,6 +363,8 @@ export class Game {
   private pause(): void {
     this.resumeState = 'play';
     this.state = 'paused';
+    this.pauseIndex = 0;
+    this.syncMenuInput();
     this.audio.suspend();
   }
 
@@ -291,6 +393,16 @@ export class Game {
     this.timer = CLEAR_TICKS;
     this.checkpointJustSaved = false;
     const done = this.levelDef.level;
+    const mission = this.levelDef.mission;
+    this.lastSeconds = this.levelPlayTicks / TICK_RATE;
+    this.lastOutcome = recordLevel(this.progress, done, {
+      score: this.score - this.levelStartScore,
+      livesLost: this.levelLivesLost,
+      seconds: this.lastSeconds,
+      par: parSeconds(mission.type, mission.type === 'SURVIVE' ? mission.seconds : undefined),
+    });
+    saveProgress(this.progress);
+    this.cutsceneUnlocked = this.lastOutcome.album.map((id) => ALBUM.find((e) => e.id === id)?.title ?? id);
     if (isCheckpointLevel(done)) {
       this.checkpoint = { level: done + 1, score: this.score, lives: this.lives, difficulty: this.difficulty };
       saveCheckpoint(this.checkpoint);
@@ -370,6 +482,12 @@ export class Game {
 
   private startLevel(): void {
     this.loadLevel(this.level);
+    // Cada mundo nuevo empieza con las vidas recargadas.
+    if (this.levelDef.stage === 1 && this.levelDef.level > 1) this.lives = Math.max(this.lives, DIFFICULTY_PRESETS[this.difficulty].lives);
+    this.levelStartScore = this.score;
+    this.levelLivesLost = 0;
+    this.levelPlayTicks = 0;
+    this.lastOutcome = null;
     this.maze.resetPellets();
     this.personal = { pinky: 0, inky: 0, clyde: 0 };
     this.globalMode = false;
@@ -415,6 +533,12 @@ export class Game {
       this.timer = VICTORY_TICKS;
       this.checkpoint = null;
       clearCheckpoint();
+      this.audio.play('intermission');
+      return;
+    }
+    if (this.level % LEVELS_PER_WORLD === 0) {
+      this.state = 'cutscene';
+      this.timer = 0;
       this.audio.play('intermission');
       return;
     }
@@ -478,6 +602,7 @@ export class Game {
   }
 
   private updatePlay(): void {
+    this.levelPlayTicks++;
     // Solo las pulsaciones nuevas se traducen: así un efecto de mando no reinterpreta lo ya pulsado.
     if (this.input.directionSeq !== this.seenDirectionSeq) {
       this.seenDirectionSeq = this.input.directionSeq;
@@ -741,6 +866,7 @@ export class Game {
       return;
     }
     this.lives--;
+    this.levelLivesLost++;
     this.globalMode = true;
     this.globalCounter = 0;
     this.elroyEnabled = false;
@@ -753,10 +879,15 @@ export class Game {
   render(ctx: CanvasRenderingContext2D): void {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
-    this.drawHud(ctx);
+    if (this.state === 'cutscene') {
+      drawCutscene(ctx, this.levelDef.world, this.timer, this.cutsceneUnlocked);
+      return;
+    }
+    // Los submenús (mapa, niveles, álbum, ajustes) tienen su propia cabecera: no llevan el marcador.
+    if (this.state !== 'title' || this.menus.screen === 'main') this.drawHud(ctx);
 
     if (this.state === 'title') {
-      this.drawTitle(ctx);
+      this.menus.draw(ctx);
       return;
     }
     if (this.state === 'victory') {
@@ -770,7 +901,7 @@ export class Game {
     const flashWhite = this.state === 'clear' && Math.floor(this.timer / 15) % 2 === 0;
     if (flashWhite) this.wallsWhite ??= this.wallRenderer.render('#ffffff', { style: this.theme.wallStyle });
     ctx.drawImage(this.background, 0, MAZE_TOP, this.maze.cols * TILE, this.maze.rows * TILE);
-    if (this.state !== 'clear') drawParticles(ctx, this.theme, this.frame);
+    if (this.state !== 'clear' && this.settings.particles) drawParticles(ctx, this.theme, this.frame);
     ctx.drawImage(flashWhite ? this.wallsWhite! : this.walls, 0, MAZE_TOP, this.maze.cols * TILE, this.maze.rows * TILE);
     if (this.state !== 'clear') {
       for (const m of this.mechanics) m.draw(ctx, this.frame);
@@ -791,7 +922,8 @@ export class Game {
 
     const cardVisible = this.state === 'ready' && this.cardActive && this.timer > READY_TICKS;
     if (this.state === 'ready' && !cardVisible) drawTextCentered(ctx, 'READY!', SCREEN_W / 2, MESSAGE_Y, COLORS.ready);
-    if (this.state === 'paused') drawTextCentered(ctx, 'PAUSE', SCREEN_W / 2, MESSAGE_Y, COLORS.ready);
+    if (this.state === 'paused') this.drawPauseMenu(ctx);
+    if (this.state === 'clear') this.drawResult(ctx);
     if (this.state === 'gameover') drawTextCentered(ctx, 'GAME  OVER', SCREEN_W / 2, MESSAGE_Y, '#ff2a2a');
     if (this.state === 'clear' && this.checkpointJustSaved) this.drawCheckpointBanner(ctx);
     if (this.state === 'dying' && this.timeUp) drawTextCentered(ctx, 'TIME UP!', SCREEN_W / 2, MESSAGE_Y, '#ff2a2a');
@@ -964,29 +1096,44 @@ export class Game {
     drawTextCentered(ctx, `PROXIMO NIVEL ${this.levelDef.level + 1}`, cx, y + 8, COLORS.text);
   }
 
-  private drawTitle(ctx: CanvasRenderingContext2D): void {
-    drawTextCentered(ctx, 'PAC-MAN', SCREEN_W / 2, 10 * TILE, COLORS.ready);
-    drawTextCentered(ctx, '100 NIVELES  10 MUNDOS', SCREEN_W / 2, 12 * TILE, '#7fa0ff');
-    drawTextCentered(ctx, 'CON CELY  AINA  Y ALEIX', SCREEN_W / 2, 14 * TILE, FAMILY.cely.color);
-    const cp = this.checkpoint;
-    const blink = Math.floor(this.frame / 30) % 2 === 0;
-    if (cp) {
-      const options = ['NUEVA PARTIDA', `CONTINUAR  NIVEL ${cp.level}`];
-      options.forEach((text, i) => {
-        const on = i === this.titleChoice;
-        drawTextCentered(ctx, on ? `> ${text} <` : text, SCREEN_W / 2, (17 + i * 2) * TILE, on ? (blink ? COLORS.ready : COLORS.text) : '#7a80a8');
-      });
-      drawTextCentered(ctx, 'ARRIBA ABAJO ELIGE', SCREEN_W / 2, 21 * TILE, COLORS.dot);
-    } else {
-      if (blink) drawTextCentered(ctx, 'PUSH START', SCREEN_W / 2, 18 * TILE, COLORS.text);
-      drawTextCentered(ctx, 'TAP  KEY  BUTTON', SCREEN_W / 2, 21 * TILE, COLORS.dot);
-    }
-    const continuing = !!cp && this.titleChoice === 1;
-    const shown = continuing ? cp!.difficulty : this.difficulty;
-    drawTextCentered(ctx, 'DIFICULTAD', SCREEN_W / 2, 24 * TILE, '#7fa0ff');
-    drawTextCentered(ctx, continuing ? DIFFICULTY_PRESETS[shown].label : `< ${DIFFICULTY_PRESETS[shown].label} >`, SCREEN_W / 2, 26 * TILE, continuing ? '#7a80a8' : COLORS.ready);
-    drawTextCentered(ctx, 'Z AINA  X ALEIX  P PAUSA', SCREEN_W / 2, 29 * TILE, '#ffb347');
-    drawTextCentered(ctx, this.audio.muted ? 'SOUND OFF  M' : 'SOUND ON  M', SCREEN_W / 2, 31 * TILE, '#7fa0ff');
+  /** Panel de fin de nivel: estrellas, récord y tiempo. */
+  private drawResult(ctx: CanvasRenderingContext2D): void {
+    const o = this.lastOutcome;
+    if (!o) return;
+    const cx = SCREEN_W / 2;
+    const y = 74;
+    ctx.save();
+    ctx.fillStyle = 'rgba(2,3,28,0.92)';
+    ctx.beginPath();
+    ctx.roundRect(24, y, SCREEN_W - 48, 70, 7);
+    ctx.fill();
+    ctx.strokeStyle = this.theme.wall;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.restore();
+    drawTextCentered(ctx, 'NIVEL COMPLETADO', cx, y + 8, COLORS.ready);
+    drawStars(ctx, cx - 20, y + 31, o.stars, 3, '#ffd24a', 6);
+    drawTextCentered(ctx, `TIEMPO ${formatTime(this.lastSeconds)}`, cx, y + 45, '#cfd8ff');
+    if (o.newBestScore) drawTextCentered(ctx, 'NUEVO RECORD', cx, y + 57, '#27e8ff');
+  }
+
+  /** Menú de pausa: continuar, reintentar el nivel o volver al menú. */
+  private drawPauseMenu(ctx: CanvasRenderingContext2D): void {
+    const cx = SCREEN_W / 2;
+    ctx.save();
+    ctx.fillStyle = 'rgba(2,3,28,0.93)';
+    ctx.beginPath();
+    ctx.roundRect(32, 92, SCREEN_W - 64, 84, 7);
+    ctx.fill();
+    ctx.strokeStyle = this.theme.wall;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.restore();
+    drawTextCentered(ctx, 'PAUSA', cx, 100, COLORS.ready);
+    ['CONTINUAR', 'REINTENTAR NIVEL', 'SALIR AL MENU'].forEach((label, i) => {
+      const on = i === this.pauseIndex;
+      drawTextCentered(ctx, on ? `> ${label} <` : label, cx, 120 + i * 16, on ? COLORS.text : '#6f759c');
+    });
   }
 
   private drawVictory(ctx: CanvasRenderingContext2D): void {
