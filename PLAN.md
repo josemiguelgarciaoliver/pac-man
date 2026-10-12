@@ -366,6 +366,46 @@ Cada mecánica es un *plugin* (`src/game/mechanics/`) descrito por datos en el n
 
 **Ideas para ampliar** (no implementadas): hielo (resbalar hasta el siguiente cruce), viento, suelo que se derrumba, lava que sube por filas, gravedad invertida, láseres con ritmo, fantasmas invisibles, espejos que engañan a la IA, rocas que ruedan, minas ocultas, imanes que atraen los puntos.
 
+**Objetos de ayuda y de riesgo añadidos después** (también como plugins):
+
+| Objeto | Efecto |
+|---|---|
+| **Zapatillas rojas** | Supervelocidad (×1,5) durante **1 minuto**, con estela. Un nivel de cada cinco (4, 9, 14…) y el 100 |
+| **Blaster** | Pac-Man puede **disparar** durante 1 minuto (Espacio / botón FUEGO / botón B del mando); cada disparo convierte en ojos al primer fantasma que alcanza. Niveles 7, 12, 17… y el 100 |
+| **Miniaturas de Aleix y Aina** | Su insignia invoca al hijo en miniatura, que **caza fantasmas** unos segundos (Aleix: rápido y va a por el más cercano a él, 10 s; Aina: más lenta, protege a Pac-Man, 14 s). La cara se puede sustituir por una foto: `public/assets/faces/aleix.png` y `aina.png` |
+| **Trampa de furia** | Una placa roja que, al pisarla, enfurece a **un** fantasma al azar con supervelocidad unos segundos (aura roja y aviso con su nombre) |
+
+### 4.7 Mundos muy distintos entre sí
+
+Cada mundo tiene un **tema visual** propio (`src/game/theme/worldThemes.ts`) y un **estilo de laberinto** propio:
+
+| Mundo | Paredes | Suelo | Partículas | Puntos | Laberintos |
+|---|---|---|---|---|---|
+| 1 Arcade | neón azul clásico | negro | — | puntos | tal cual el arcade |
+| 2 Bosque | setos sólidos verdes | hierba | luciérnagas | semillas | enmarañados y orgánicos |
+| 3 Fábrica | acero con borde naranja | chapa con remaches | chispas | tuercas | rejilla de largos pasillos rectos |
+| 4 Polo | cristal de doble línea | hielo | nieve | copos | grandes bloques de hielo |
+| 5 Pirámides | ladrillos dorados | arena | polvo del desierto | granos | cámaras pequeñas y regulares |
+| 6 Mar | líneas onduladas | agua | burbujas | perlas | corrientes abiertas |
+| 7 Volcán | grietas dentadas | lava | brasas | brasas | tramos largos y quebrados |
+| 8 Espacio | guiones violeta | rejilla | estrellas | estrellas | circuito ordenado |
+| 9 Castillo | sillares de piedra | losas | volutas fantasmales | monedas | laberinto de bucles |
+| 10 Glitch | aberración cromática | ruido digital | bloques de error | píxeles | caos |
+
+La tarjeta de inicio de cada nivel lleva el emblema de su mundo.
+
+**Niveles muy raros** (`src/game/maze/special.ts`): distribuciones que rompen el estilo de pasillos, con título en la tarjeta:
+la **Sala sin paredes** (nivel 9, sin ninguna pared interior), **El anillo** (18), **La nave de postes** (27), **El lago helado** (34),
+**La sala de columnas** (46), **El arrecife abierto** (58), **El cráter** (66), **Campo de asteroides** (77), **El salón del trono** (86),
+**El tablero roto** (93) y **El campo vacío** (99).
+
+### 4.8 Curva de dificultad (1 → 100)
+
+La dificultad **solo sube**: del nivel 1 al 100 la velocidad de los fantasmas crece respecto a la de Pac-Man, el estado asustado se acorta
+hasta desaparecer, la dispersión (el respiro) se encoge y el *Cruise Elroy* se activa antes. La ayuda de los modos Fácil/Normal se desvanece
+con el avance, de modo que **el nivel 100 es prácticamente imposible en cualquier modo**: los fantasmas corren más de 1,4× la velocidad de
+Pac-Man, no hay estado asustado y la dispersión dura 1 s. Las zapatillas, el blaster y las miniaturas son las armas del jugador. Las pruebas
+automáticas comprueban esta monotonía para los tres modos.
 ---
 
 ## 5. Gráficos y sonido

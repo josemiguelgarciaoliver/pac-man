@@ -4,6 +4,9 @@ import type { Maze } from '../maze/maze';
 /** Con este margen (px) antes/después del centro de la casilla se permite girar (cornering). */
 const CORNER_WINDOW = 3;
 
+/** Tolerancia (px) al comparar con el centro de una casilla (el redondeo no debe dejar pasar a Pac-Man). */
+const EPS = 1e-6;
+
 const approach = (v: number, target: number, step: number): number =>
   v < target ? Math.min(v + step, target) : Math.max(v - step, target);
 
@@ -86,7 +89,7 @@ export class PacMan {
     // Distancia al centro de la casilla medida en el sentido de la marcha (>0: ya pasado).
     const o = (horizontal ? this.x - cx : this.y - cy) * sign;
 
-    if (o + step > 0 && o <= 0 && !this.canEnter(maze, this.dir)) {
+    if (o + step > EPS && o <= EPS && !this.canEnter(maze, this.dir)) {
       if (horizontal) this.x = cx;
       else this.y = cy;
       this.moving = false;

@@ -33,7 +33,11 @@ temática familiar (Cely, Aina y Aleix). Pendientes: editor de laberintos, jefes
 
 **Elementos del laberinto:** bombas que derriban paredes, sierras, torretas que disparan de pared a pared, paredes móviles, pinchos, portales, barro, cintas y setas tóxicas que distorsionan la visión, invierten o giran los controles, giran el laberinto o lo dejan a oscuras (ver PLAN.md §4.6).
 
+**Objetos:** zapatillas rojas (supervelocidad 1 min), blaster (disparar 1 min con Espacio), miniaturas de Aleix y Aina que cazan fantasmas, y trampas de furia que aceleran a un fantasma. Las caras de Aleix y Aina se pueden sustituir por fotos en `public/assets/faces/` (`aleix.png`, `aina.png`).
+
+**Mundos:** cada uno tiene su estilo de paredes, suelo, partículas, puntos y laberintos, y hay niveles muy raros (como la sala sin paredes del nivel 9). La dificultad sube sin parar hasta el nivel 100, que es casi imposible.
+
 **Checkpoints:** cada 2 niveles completados (2, 4, 6…) el progreso se guarda en el navegador; en el título se elige *Continuar*.
 
-Parámetros útiles: `/?autostart&level=28` empieza en un nivel concreto; `/?touch` fuerza el diseño táctil; `/?quick` salta la tarjeta de nivel (pruebas).
+Parámetros útiles: `/?autostart&level=28` empieza en un nivel concreto; `/?touch` fuerza el diseño táctil; `/?quick` salta la tarjeta de nivel (pruebas). Teclas: `Z` Aina, `X` Aleix, `Espacio` disparar.
 Regenerar los laberintos: `npm run generate:mazes`.

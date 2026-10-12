@@ -4,6 +4,10 @@ import { Dir } from '../src/game/constants';
 import { createRng } from '../src/game/random';
 
 // El dibujo de paredes necesita un canvas real; la simulación solo necesita la lógica.
+vi.mock('../src/game/theme/background', () => ({
+  renderBackground: () => ({}),
+  drawParticles: () => {},
+}));
 vi.mock('../src/game/maze/render', () => ({
   renderWalls: () => ({}),
   WallRenderer: class {

@@ -1,6 +1,7 @@
 import { ORIGINAL_MAZE } from '../../data/mazes/original';
 import { MAZE_COLS, MAZE_ROWS } from '../constants';
 import { createRng, type Rng } from '../random';
+import { MAZE_STYLES, type MazeStyle } from '../theme/worldThemes';
 
 /**
  * Generador y validador de laberintos al estilo arcade.
@@ -36,9 +37,9 @@ interface VLine {
   to: number;
 }
 
-function pickColumns(rng: Rng): number[] {
+function pickColumns(rng: Rng, range: [number, number]): number[] {
   const cols = [1];
-  const target = 3 + rng.int(3); // 3–5 líneas verticales además del borde
+  const target = range[0] + rng.int(range[1] - range[0] + 1); // líneas verticales además del borde
   for (const c of rng.shuffle([3, 4, 5, 6, 7, 8, 9, 10, 11, 12])) {
     if (cols.length - 1 >= target) break;
     if (cols.every((x) => Math.abs(x - c) >= 3)) cols.push(c);
@@ -47,17 +48,17 @@ function pickColumns(rng: Rng): number[] {
 }
 
 /** Dibuja una región como esqueleto de líneas y corta tramos al azar. */
-function carveRegion(open: boolean[][], region: Region, rng: Rng, removeProb: number): void {
+function carveRegion(open: boolean[][], region: Region, rng: Rng, style: MazeStyle, removeProb: number): void {
   const hRows = [...region.hRequired];
   for (const r of region.hOptional) {
     const tooClose = hRows.some((x) => Math.abs(x - r) < 3);
-    if (!tooClose && rng.chance(0.7)) hRows.push(r);
+    if (!tooClose && rng.chance(style.optionalH)) hRows.push(r);
   }
   hRows.sort((a, b) => a - b);
 
   const spans: [number, number][] = [];
   for (let i = 0; i < hRows.length; i++) for (let j = i + 1; j < hRows.length; j++) spans.push([hRows[i], hRows[j]]);
-  const vLines: VLine[] = pickColumns(rng).map((col) => {
+  const vLines: VLine[] = pickColumns(rng, style.vLines).map((col) => {
     if (col === 1) return { col, from: region.first, to: region.last };
     const [from, to] = spans[rng.int(spans.length)];
     return { col, from, to };
@@ -120,11 +121,11 @@ function pruneDeadEnds(open: boolean[][]): void {
   }
 }
 
-function tryGenerate(rng: Rng): string[] | null {
+function tryGenerate(rng: Rng, style: MazeStyle): string[] | null {
   const open = Array.from({ length: MAZE_ROWS }, () => new Array<boolean>(MAZE_COLS).fill(false));
-  const removeProb = 0.25 + rng.float() * 0.25;
-  carveRegion(open, TOP_REGION, rng, removeProb);
-  carveRegion(open, BOTTOM_REGION, rng, removeProb);
+  const removeProb = style.removeProb[0] + rng.float() * (style.removeProb[1] - style.removeProb[0]);
+  carveRegion(open, TOP_REGION, rng, style, removeProb);
+  carveRegion(open, BOTTOM_REGION, rng, style, removeProb);
   // Espolón central arriba, como el original (el cruce del centro se cierra en las filas 1 y 29).
   if (rng.chance(0.5)) open[1][MID] = false;
   if (rng.chance(0.3)) open[29][MID] = false;
@@ -240,11 +241,11 @@ export function qualityErrors(lines: readonly string[]): string[] {
   return errors;
 }
 
-/** Genera un laberinto válido y determinista para la semilla dada. */
-export function generateMaze(seed: number): string[] {
+/** Genera un laberinto válido y determinista para la semilla dada, con el estilo del mundo. */
+export function generateMaze(seed: number, style: MazeStyle = MAZE_STYLES[1]): string[] {
   for (let attempt = 0; attempt < 5000; attempt++) {
     const rng = createRng(seed * 104729 + attempt * 31);
-    const lines = tryGenerate(rng);
+    const lines = tryGenerate(rng, style);
     if (lines && validateMaze(lines).length === 0 && qualityErrors(lines).length === 0) return lines;
   }
   throw new Error(`No se pudo generar un laberinto válido para la semilla ${seed}`);

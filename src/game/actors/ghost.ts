@@ -32,6 +32,9 @@ const NO_UP: Tile[] = [
 
 const PRIORITY = [Dir.Up, Dir.Left, Dir.Down, Dir.Right];
 
+/** Tolerancia (px) para decidir que un actor ha llegado al centro de una casilla: evita que el redondeo se salte el giro. */
+const EPS = 1e-6;
+
 export interface MoveEnv {
   maze: Maze;
   /** Casilla objetivo (ignorada si el fantasma está asustado). */
@@ -166,9 +169,9 @@ export class Ghost {
     const cy = this.row * TILE + TILE / 2;
     const o = (horizontal ? this.x - cx : this.y - cy) * sign;
 
-    if (o < 0 && o + step >= 0) {
+    if (o < -EPS && o + step >= -EPS) {
       // Llega al centro de la casilla: decide el rumbo y gasta el resto del paso en él.
-      const rest = step + o;
+      const rest = Math.max(0, step + o);
       this.x = cx;
       this.y = cy;
       this.arrive(env);

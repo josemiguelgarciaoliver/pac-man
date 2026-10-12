@@ -17,6 +17,10 @@ import type { LevelDef } from './level/schema';
 import { Maze } from './maze/maze';
 import { WallRenderer } from './maze/render';
 import { createMechanics, type Mechanic, type MechanicEnv } from './mechanics';
+import { drawParticles, renderBackground } from './theme/background';
+import { drawEmblem } from './theme/emblems';
+import { drawPelletShape } from './theme/pelletShapes';
+import { themeOfWorld, type WorldTheme } from './theme/worldThemes';
 import { Mission } from './missions';
 import { Projectiles } from './projectiles';
 import { createRng, type Rng } from './random';
@@ -85,6 +89,8 @@ const readHighScore = (): number => {
 export class Game {
   private levelDef!: LevelDef;
   private maze!: Maze;
+  private theme!: WorldTheme;
+  private background!: HTMLCanvasElement;
   private wallRenderer!: WallRenderer;
   private walls!: HTMLCanvasElement;
   /** Versión del laberinto con la que se dibujaron las paredes (cambia al explotar una bomba). */
@@ -299,7 +305,9 @@ export class Game {
     if (!this.levelDef || this.levelDef.level !== def.level) {
       this.maze = new Maze(def.maze, ORIGINAL_PAC_SPAWN);
       this.wallRenderer = new WallRenderer(this.maze);
-      this.walls = this.wallRenderer.render(def.wallColor);
+      this.theme = themeOfWorld(def.world);
+      this.walls = this.wallRenderer.render(this.theme.wall, this.wallLook());
+      this.background = renderBackground(this.maze, this.theme);
       this.wallsWhite = null;
       this.wallsVersion = this.maze.version;
     } else {
@@ -319,9 +327,15 @@ export class Game {
   private syncWalls(): void {
     if (this.maze.version === this.wallsVersion) return;
     this.wallRenderer.refresh(this.maze.consumeChanged());
-    this.walls = this.wallRenderer.render(this.levelDef.wallColor);
+    this.walls = this.wallRenderer.render(this.theme.wall, this.wallLook());
+    this.background = renderBackground(this.maze, this.theme);
     this.wallsWhite = null;
     this.wallsVersion = this.maze.version;
+  }
+
+  /** Estilo de las paredes del mundo actual. */
+  private wallLook() {
+    return { style: this.theme.wallStyle, fill: this.theme.wallFill, brick: this.theme.brick };
   }
 
   private mechanicEnv(): MechanicEnv {
@@ -754,7 +768,9 @@ export class Game {
     ctx.save();
     this.view.applyMazeTransform(ctx, MAZE_CENTER.x, MAZE_CENTER.y, MAZE_AREA.w, MAZE_AREA.h);
     const flashWhite = this.state === 'clear' && Math.floor(this.timer / 15) % 2 === 0;
-    if (flashWhite) this.wallsWhite ??= this.wallRenderer.render('#ffffff');
+    if (flashWhite) this.wallsWhite ??= this.wallRenderer.render('#ffffff', { style: this.theme.wallStyle });
+    ctx.drawImage(this.background, 0, MAZE_TOP, this.maze.cols * TILE, this.maze.rows * TILE);
+    if (this.state !== 'clear') drawParticles(ctx, this.theme, this.frame);
     ctx.drawImage(flashWhite ? this.wallsWhite! : this.walls, 0, MAZE_TOP, this.maze.cols * TILE, this.maze.rows * TILE);
     if (this.state !== 'clear') {
       for (const m of this.mechanics) m.draw(ctx, this.frame);
@@ -916,6 +932,8 @@ export class Game {
     ctx.lineWidth = 1.3;
     ctx.stroke();
     const cx = SCREEN_W / 2;
+    drawEmblem(ctx, this.theme.emblem, x + 22, y + 22, 9, this.theme.wall);
+    drawEmblem(ctx, this.theme.emblem, x + w - 22, y + 22, 9, this.theme.wall);
     drawTextCentered(ctx, `MUNDO ${def.world}`, cx, y + 9, def.wallColor);
     drawTextCentered(ctx, def.name.toUpperCase(), cx, y + 21, COLORS.text);
     drawTextCentered(ctx, `NIVEL ${def.stage}`, cx, y + 34, COLORS.ready);
@@ -986,33 +1004,38 @@ export class Game {
   }
 
   private drawPellets(ctx: CanvasRenderingContext2D): void {
-    ctx.fillStyle = COLORS.dot;
-    ctx.beginPath();
+    const { shape, color } = this.theme.pellet;
     const energizers: { x: number; y: number }[] = [];
+    if (shape === 'dot') ctx.beginPath();
     for (const p of this.maze.pelletTiles()) {
       const x = p.c * TILE + TILE / 2;
       const y = MAZE_TOP + p.r * TILE + TILE / 2;
-      if (p.kind === 'dot') {
+      if (p.kind === 'energizer') {
+        energizers.push({ x, y });
+      } else if (shape === 'dot') {
         ctx.moveTo(x + 1.2, y);
         ctx.arc(x, y, 1.2, 0, Math.PI * 2);
       } else {
-        energizers.push({ x, y });
+        drawPelletShape(ctx, shape, color, x, y, this.frame, p.c, p.r);
       }
     }
-    ctx.fill();
+    if (shape === 'dot') {
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
 
-    // Los energizers laten y brillan.
+    // Los energizers laten y brillan con el color del mundo.
     const pulse = 3.5 + 0.5 * Math.sin(this.frame / 5);
     const blinkOn = Math.floor(this.frame / 10) % 2 === 0 || this.state !== 'play';
     if (!blinkOn) return;
     ctx.save();
-    ctx.shadowColor = '#ffb8ae';
+    ctx.shadowColor = this.theme.energizer;
     ctx.shadowBlur = ctx.getTransform().a * 3;
     for (const e of energizers) {
       const g = ctx.createRadialGradient(e.x - 1, e.y - 1, 0.4, e.x, e.y, pulse);
       g.addColorStop(0, '#ffffff');
-      g.addColorStop(0.5, '#ffd2c8');
-      g.addColorStop(1, '#ff9a8a');
+      g.addColorStop(0.5, this.theme.energizer);
+      g.addColorStop(1, this.theme.wall);
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(e.x, e.y, pulse, 0, Math.PI * 2);

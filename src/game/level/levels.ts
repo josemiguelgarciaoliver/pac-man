@@ -4,23 +4,13 @@ import { LEVEL_SPECIALS } from '../../data/levelSpecials';
 import { SPECIAL_LAYOUTS } from '../../data/specialLevels';
 import { TOTAL_LEVELS, levelPosition } from '../../data/worlds';
 import { arcadeEquivalent } from './curve';
+import { WORLD_THEMES } from '../theme/worldThemes';
 import { buildSpecialMaze, validateSpecialMaze } from '../maze/special';
 import { validateMaze } from '../maze/generator';
 import { levelSchema, type LevelDef } from './schema';
 
-/** Color de las paredes de cada mundo (mismo estilo, distinta paleta). */
-export const WORLD_WALL_COLORS = [
-  '#3d5bff', // 1 Arcade: azul clásico
-  '#3fdc6a', // 2 Bosque: verde
-  '#ff9a3d', // 3 Fábrica: naranja acero
-  '#5fe3ff', // 4 Polo: cian hielo
-  '#ffd24a', // 5 Desierto: dorado
-  '#20d4c4', // 6 Marino: turquesa
-  '#ff4a3a', // 7 Volcán: rojo magma
-  '#b36bff', // 8 Espacio: violeta
-  '#a79bd0', // 9 Castillo: piedra morada
-  '#ff3df2', // 10 Glitch: magenta
-] as const;
+/** Color de las paredes de cada mundo (sale de su tema visual). */
+export const WORLD_WALL_COLORS = WORLD_THEMES.map((t) => t.wall);
 
 const specialCache = new Map<number, string[]>();
 

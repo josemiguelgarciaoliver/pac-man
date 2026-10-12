@@ -235,3 +235,19 @@ describe('ojos de fantasma comido', () => {
     expect(failures).toEqual([]);
   });
 });
+
+describe('movimiento por casillas con velocidades fraccionarias', () => {
+  it('ningún fantasma se salta una casilla de decisión (ni acaba dentro de una pared) a ninguna velocidad', () => {
+    const lines = ORIGINAL_MAZE;
+    const maze = new Maze(lines, ORIGINAL_PAC_SPAWN);
+    for (const speed of [0.6, 0.75, 0.9, 1.0, 1.3, 1.6, 1.85]) {
+      const env: MoveEnv = { maze, target: { col: 1, row: 29 }, rng: createRng(3), houseSpeed: 0.5 };
+      const g = new Ghost('blinky');
+      g.initNav(env);
+      for (let t = 0; t < 4000; t++) {
+        g.move(env, speed);
+        expect(maze.charAt(g.col, g.row), `velocidad ${speed}, tick ${t}`).not.toBe('#');
+      }
+    }
+  });
+});
