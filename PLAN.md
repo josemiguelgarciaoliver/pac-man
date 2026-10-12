@@ -350,25 +350,25 @@ Nombres esperados en `public/assets/audio/`:
 Cada fase acaba en un hito jugable y desplegado en GitHub Pages.
 
 ### Fase 0 — Preparación del proyecto
-- [ ] Repositorio público `pac-man` en GitHub, `README.md`, `.gitignore`, licencia del código.
-- [ ] Vite + TypeScript estricto + ESLint + Prettier + Vitest + Playwright.
-- [ ] GitHub Actions: lint + typecheck + tests en cada PR; deploy a Pages en `main`.
+- [~] Repositorio público `pac-man` en GitHub, `README.md`, `.gitignore`, licencia del código.
+- [x] Vite + TypeScript estricto + Vitest (pendiente: ESLint, Prettier, Playwright).
+- [x] GitHub Actions: lint + typecheck + tests en cada PR; deploy a Pages en `main`.
 - **Hito:** página "INSERT COIN" desplegada.
 
 ### Fase 1 — Motor base
-- [ ] Bucle de paso fijo de 60 Hz con acumulador e interpolación de render.
-- [ ] Canvas lógico de 224×288 y escalado entero responsive (resize, DPR, orientación).
+- [x] Bucle de paso fijo de 60 Hz con acumulador e interpolación de render.
+- [x] Canvas lógico de 224×288 y escalado entero responsive (resize, DPR, orientación).
 - [ ] Cargador de assets (sprites, fuente bitmap, audio) con pantalla de carga.
 - [ ] Máquina de estados del juego (Boot → Attract → Menú → Intro → Juego → Muerte → Nivel completo → Game Over).
 - [ ] RNG con semilla y sistema de grabación/reproducción de inputs (replays).
-- [ ] `InputManager` unificado (teclado, al principio).
+- [x] `InputManager` unificado (teclado, táctil y gamepad básicos).
 - **Hito:** Pac-Man se mueve por una rejilla de prueba.
 
 ### Fase 2 — Pac-Man arcade fiel (laberinto original)
-- [ ] Parser de laberintos ASCII y **render procedural de paredes** al estilo original.
+- [x] Parser de laberintos ASCII y **render procedural de paredes** al estilo original.
 - [ ] Movimiento de Pac-Man: velocidades por tabla, *cornering*, buffer de giro y pausas al comer.
 - [ ] Los 4 fantasmas con su IA exacta, modos *scatter/chase/frightened/eaten*, casa y contadores, *Elroy*, túnel lento y zonas sin giro hacia arriba.
-- [ ] Puntuación, frutas, vidas, vida extra, récord y HUD.
+- [~] Puntuación, frutas, vidas, vida extra, récord y HUD.
 - [ ] Secuencias: inicio, muerte, nivel completado y *intermissions*.
 - [ ] Tests de simulación contra comportamientos conocidos (p. ej. rutas de los fantasmas en el frame N).
 - **Hito:** clon del arcade jugable de principio a fin, sin sonido.
