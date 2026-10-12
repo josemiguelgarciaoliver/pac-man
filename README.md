@@ -31,7 +31,9 @@ Fases 0–5 casi completas: motor, fantasmas con la IA del arcade, sonido, gráf
 PWA offline, 100 niveles en 10 mundos (laberintos únicos generados y validados), misiones, cintas transportadoras y la
 temática familiar (Cely, Aina y Aleix). Pendientes: editor de laberintos, jefes, y las mecánicas propias de cada mundo (Fases 7–9).
 
+**Elementos del laberinto:** bombas que derriban paredes, sierras, torretas que disparan de pared a pared, paredes móviles, pinchos, portales, barro, cintas y setas tóxicas que distorsionan la visión, invierten o giran los controles, giran el laberinto o lo dejan a oscuras (ver PLAN.md §4.6).
+
 **Checkpoints:** cada 2 niveles completados (2, 4, 6…) el progreso se guarda en el navegador; en el título se elige *Continuar*.
 
-Parámetros útiles: `/?autostart&level=28` empieza en un nivel concreto; `/?touch` fuerza el diseño táctil.
+Parámetros útiles: `/?autostart&level=28` empieza en un nivel concreto; `/?touch` fuerza el diseño táctil; `/?quick` salta la tarjeta de nivel (pruebas).
 Regenerar los laberintos: `npm run generate:mazes`.

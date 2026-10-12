@@ -25,8 +25,19 @@ const SWIPE_MIN = 18;
  * "intención" de dirección más una pulsación de acción (start/confirmar).
  */
 export class Input {
+  private dir: Dir | null = null;
+  /** Sube con cada petición de dirección: permite distinguir una pulsación nueva de una antigua. */
+  directionSeq = 0;
+
   /** Última dirección pedida; se mantiene hasta que el juego la consume. */
-  direction: Dir | null = null;
+  get direction(): Dir | null {
+    return this.dir;
+  }
+
+  set direction(d: Dir | null) {
+    this.dir = d;
+    if (d !== null) this.directionSeq++;
+  }
   private pressed = false;
   private pauseRequested = false;
   private muteRequested = false;

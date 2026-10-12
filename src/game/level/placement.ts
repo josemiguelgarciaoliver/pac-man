@@ -98,8 +98,7 @@ export function dotTiles(lines: readonly string[]): TileXY[] {
  * Reparte `count` casillas lo más lejos posible unas de otras y de la salida de Pac-Man
  * (muestreo del punto más lejano; entre los mejores candidatos elige uno al azar).
  */
-export function pickSpread(lines: readonly string[], count: number, rng: Rng): TileXY[] {
-  const candidates = dotTiles(lines);
+export function pickSpread(lines: readonly string[], count: number, rng: Rng, candidates: TileXY[] = dotTiles(lines)): TileXY[] {
   const minDist = new Map<number, number>();
   const spawnDist = bfs(lines, PAC_SPAWN_TILE).dist;
   for (const t of candidates) minDist.set(key(t.col, t.row), spawnDist[key(t.col, t.row)]);
@@ -168,4 +167,79 @@ export function beltRuns(lines: readonly string[]): BeltRun[] {
   collect(true);
   collect(false);
   return runs;
+}
+
+const OPEN_CHARS = '. o';
+const isOpenChar = (lines: readonly string[], c: number, r: number) => r >= 0 && r < MAZE_ROWS && c >= 0 && c < MAZE_COLS && OPEN_CHARS.includes(lines[r][c]) && lines[r][c] !== '-';
+const isWallChar = (lines: readonly string[], c: number, r: number) => r < 0 || r >= MAZE_ROWS || c < 0 || c >= MAZE_COLS || lines[r][c] === '#';
+
+export interface OpenRun {
+  horizontal: boolean;
+  tiles: TileXY[];
+  /** Pared de la que sale el disparo (extremo de inicio) y pared contra la que acaba. */
+  startWall: TileXY;
+  endWall: TileXY;
+}
+
+/**
+ * Tramos rectos de pasillo cerrados por una pared en cada extremo (de pared a pared), de al menos
+ * 8 casillas: el sitio donde una torreta puede disparar de lado a lado.
+ */
+export function openRuns(lines: readonly string[], minLength = 8): OpenRun[] {
+  const reach = reachableTiles(lines);
+  const runs: OpenRun[] = [];
+  const scan = (horizontal: boolean) => {
+    const outer = horizontal ? MAZE_ROWS : MAZE_COLS;
+    const inner = horizontal ? MAZE_COLS : MAZE_ROWS;
+    for (let a = 0; a < outer; a++) {
+      // Los pasillos horizontales de la banda central (casa y túnel) no sirven de pista de tiro.
+      if (horizontal && (a < 1 || a > 29 || (a >= 9 && a <= 19))) continue;
+      let start = -1;
+      for (let b = 0; b <= inner; b++) {
+        const [c, r] = horizontal ? [b, a] : [a, b];
+        const open = b < inner && isOpenChar(lines, c, r) && reach.has(r * MAZE_COLS + c);
+        if (open && start === -1) start = b;
+        if (!open && start !== -1) {
+          const len = b - start;
+          const tile = (i: number): TileXY => (horizontal ? { col: i, row: a } : { col: a, row: i });
+          if (len >= minLength && isWallChar(lines, ...(horizontal ? [start - 1, a] : [a, start - 1]) as [number, number]) && isWallChar(lines, ...(horizontal ? [b, a] : [a, b]) as [number, number])) {
+            runs.push({ horizontal, tiles: Array.from({ length: len }, (_, i) => tile(start + i)), startWall: tile(start - 1), endWall: tile(b) });
+          }
+          start = -1;
+        }
+      }
+    }
+  };
+  scan(true);
+  scan(false);
+  return runs;
+}
+
+export interface BombSite extends TileXY {
+  /** Dirección (dc, dr) hacia la pared de 2 casillas que la explosión puede abrir. */
+  dc: number;
+  dr: number;
+}
+
+/**
+ * Casillas de pasillo pegadas a una pared de exactamente 2 casillas de grosor con otro pasillo
+ * detrás: al estallar ahí una bomba se abre un atajo útil.
+ */
+export function bombSites(lines: readonly string[]): BombSite[] {
+  const reach = reachableTiles(lines);
+  const sites: BombSite[] = [];
+  const destroyable = (c: number, r: number) => c >= 1 && c <= MAZE_COLS - 2 && r >= 1 && r <= MAZE_ROWS - 2 && (r < 9 || r > 19) && lines[r][c] === '#';
+  for (let r = 1; r <= 29; r++) {
+    if (r >= 9 && r <= 19) continue;
+    for (let c = 1; c <= MAZE_COLS - 2; c++) {
+      if (lines[r][c] !== '.' || !reach.has(r * MAZE_COLS + c)) continue;
+      for (const [dc, dr] of [[0, -1], [-1, 0], [0, 1], [1, 0]] as const) {
+        if (destroyable(c + dc, r + dr) && destroyable(c + 2 * dc, r + 2 * dr) && isOpenChar(lines, c + 3 * dc, r + 3 * dr) && reach.has((r + 3 * dr) * MAZE_COLS + c + 3 * dc)) {
+          sites.push({ col: c, row: r, dc, dr });
+          break;
+        }
+      }
+    }
+  }
+  return sites;
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ALL_EFFECTS } from '../viewEffects';
 
 /**
  * Formato de datos de un nivel. Todo lo que cambia entre niveles (laberinto, misión, mecánicas,
@@ -37,6 +38,62 @@ export const mechanicSchema = z.discriminatedUnion('type', [
     ghosts: z.boolean().default(false),
     /** Sentidos alternos en tramos contiguos (líneas de montaje). */
     chain: z.boolean().default(false),
+  }),
+  /** Bombas: al acercarse Pac-Man se arman y estallan, derribando paredes y matando lo que pillen. */
+  z.object({
+    type: z.literal('bomb'),
+    count: z.number().int().min(1).max(6),
+    fuseSeconds: z.number().min(1.5).max(8).default(3),
+    radius: z.number().int().min(1).max(3).default(2),
+  }),
+  /** Sierras que patrullan un pasillo de punta a punta. */
+  z.object({
+    type: z.literal('sawblade'),
+    count: z.number().int().min(1).max(6),
+    speed: z.number().min(0.3).max(1.4),
+  }),
+  /** Torretas en la pared que disparan de lado a lado de un pasillo, avisando antes. */
+  z.object({
+    type: z.literal('turret'),
+    count: z.number().int().min(1).max(4),
+    periodSeconds: z.number().min(2).max(12),
+  }),
+  /** Puertas que se abren y se cierran solas. */
+  z.object({
+    type: z.literal('gate'),
+    count: z.number().int().min(1).max(6),
+    openSeconds: z.number().min(2).max(10),
+    closedSeconds: z.number().min(1).max(8),
+  }),
+  /** Portales por parejas: Pac-Man sale por el otro. */
+  z.object({
+    type: z.literal('teleport'),
+    pairs: z.number().int().min(1).max(3),
+  }),
+  /** Pinchos que salen del suelo con ritmo (avisan antes de subir). */
+  z.object({
+    type: z.literal('spikes'),
+    count: z.number().int().min(1).max(8),
+    periodSeconds: z.number().min(2).max(8),
+  }),
+  /** Setas tóxicas: al comerlas dan un efecto al azar (visión, mando, giro, espejo, oscuridad, turbo). */
+  z.object({
+    type: z.literal('mushroom'),
+    count: z.number().int().min(1).max(6),
+    effects: z.array(z.enum(ALL_EFFECTS as [string, ...string[]])).min(1).default([...ALL_EFFECTS]),
+    effectSeconds: z.number().min(3).max(20).default(8),
+  }),
+  /** Fenómeno periódico del nivel: el laberinto gira, se refleja, se oscurece o confunde el mando. */
+  z.object({
+    type: z.literal('phenomenon'),
+    effect: z.enum(ALL_EFFECTS as [string, ...string[]]),
+    everySeconds: z.number().min(6).max(90),
+    durationSeconds: z.number().min(3).max(40),
+  }),
+  /** Charcos de barro que frenan a todos. */
+  z.object({
+    type: z.literal('puddle'),
+    count: z.number().int().min(1).max(6),
   }),
 ]);
 

@@ -9,6 +9,13 @@ export class Maze {
   readonly cols: number;
   readonly rows: number;
   private readonly cells: string[][];
+  /** Copia del laberinto tal como se cargó (las bombas lo modifican durante la partida). */
+  private readonly original: string[][];
+  /** Casillas cerradas temporalmente (puertas, enredaderas…). */
+  private readonly blocked = new Set<number>();
+  /** Sube cada vez que cambia la forma de las paredes: hay que volver a dibujarlas. */
+  version = 0;
+  private changed: { col: number; row: number }[] = [];
   /** Filas con túnel de lado a lado. */
   private readonly tunnelRows = new Set<number>();
   /** Casillas no-pared que ningún actor puede alcanzar (se pintan como pared). */
@@ -27,6 +34,7 @@ export class Maze {
       if (l.length !== this.cols) throw new Error(`Fila ${r} con ancho ${l.length}`);
       return [...l];
     });
+    this.original = this.cells.map((row) => [...row]);
     for (let r = 0; r < this.rows; r++) {
       if (this.cells[r][0] !== WALL && this.cells[r][this.cols - 1] !== WALL) this.tunnelRows.add(r);
     }
@@ -97,10 +105,64 @@ export class Maze {
     return this.cells[r][c];
   }
 
-  /** ¿Puede Pac-Man pisar la casilla? (ni paredes ni puertas) */
+  /** ¿Puede Pac-Man pisar la casilla? (ni paredes, ni la puerta de la casa, ni casillas cerradas) */
   isWalkable(c: number, r: number): boolean {
     const ch = this.charAt(c, r);
-    return ch !== WALL && ch !== DOOR;
+    if (ch === WALL || ch === DOOR) return false;
+    return !(this.blocked.size > 0 && c >= 0 && c < this.cols && r >= 0 && r < this.rows && this.blocked.has(this.key(c, r)));
+  }
+
+  // ── Cambios en vivo (bombas, puertas) ──
+
+  /** ¿Es una pared que una explosión puede derribar? (no el borde ni la banda de la casa de fantasmas) */
+  isDestroyable(c: number, r: number): boolean {
+    return c >= 1 && c < this.cols - 1 && r >= 1 && r < this.rows - 1 && (r < 9 || r > 19) && this.cells[r][c] === WALL;
+  }
+
+  destroyWall(c: number, r: number): boolean {
+    if (!this.isDestroyable(c, r)) return false;
+    this.cells[r][c] = ' ';
+    this.touch(c, r);
+    return true;
+  }
+
+  setBlocked(c: number, r: number, blocked: boolean): void {
+    const k = this.key(c, r);
+    if (blocked === this.blocked.has(k)) return;
+    if (blocked) this.blocked.add(k);
+    else this.blocked.delete(k);
+    this.distCache.clear();
+  }
+
+  isBlocked(c: number, r: number): boolean {
+    return this.blocked.has(this.key(c, r));
+  }
+
+  /** Vuelve a dejar el laberinto como al cargarlo (al reiniciar el nivel). */
+  resetDynamic(): void {
+    this.blocked.clear();
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        if (this.cells[r][c] !== this.original[r][c]) {
+          this.cells[r][c] = this.original[r][c];
+          this.touch(c, r);
+        }
+      }
+    }
+    this.distCache.clear();
+  }
+
+  /** Casillas de pared cambiadas desde la última consulta (para redibujar solo lo necesario). */
+  consumeChanged(): { col: number; row: number }[] {
+    const out = this.changed;
+    this.changed = [];
+    return out;
+  }
+
+  private touch(c: number, r: number): void {
+    this.version++;
+    this.changed.push({ col: c, row: r });
+    this.distCache.clear();
   }
 
   /** Casilla que se dibuja como espacio abierto (suelo o puerta; no pared ni vacío). */

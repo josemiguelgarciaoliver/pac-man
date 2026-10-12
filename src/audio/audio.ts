@@ -1,4 +1,6 @@
 export type SoundName = 'start' | 'waka' | 'eat_fruit' | 'eat_ghost' | 'extra_life' | 'intermission' | 'death';
+/** Efectos sintetizados de las mecánicas de nivel. */
+export type SfxKind = 'explosion' | 'zap' | 'teleport' | 'tick' | 'gate' | 'spike' | 'poison';
 export type AmbientKind = 'siren' | 'power' | 'eyes';
 
 const FILES: SoundName[] = ['start', 'waka', 'eat_fruit', 'eat_ghost', 'extra_life', 'intermission', 'death'];
@@ -21,6 +23,7 @@ export class AudioManager {
   private buffers = new Map<SoundName, AudioBuffer>();
   private loop: Loop | null = null;
   private wakaEnd = 0;
+  private noise: AudioBuffer | null = null;
   muted = false;
 
   constructor() {
@@ -103,6 +106,82 @@ export class AudioManager {
     if (!ctx || ctx.currentTime < this.wakaEnd) return;
     this.play('waka', 0.9);
     this.wakaEnd = ctx.currentTime + this.duration('waka') * 0.95;
+  }
+
+  private noiseBuffer(): AudioBuffer | null {
+    const ctx = this.ctx;
+    if (!ctx) return null;
+    if (!this.noise) {
+      const buf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      this.noise = buf;
+    }
+    return this.noise;
+  }
+
+  /** Efectos cortos generados al vuelo (explosiones, disparos, portales…): no necesitan archivos. */
+  sfx(kind: SfxKind): void {
+    const ctx = this.ctx;
+    const master = this.master;
+    if (!ctx || !master || ctx.state !== 'running') return;
+    const t = ctx.currentTime;
+    const tone = (type: OscillatorType, f0: number, f1: number, dur: number, vol: number, delay = 0) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(f0, t + delay);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + delay + dur);
+      gain.gain.setValueAtTime(vol, t + delay);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + delay + dur);
+      osc.connect(gain).connect(master);
+      osc.start(t + delay);
+      osc.stop(t + delay + dur + 0.02);
+    };
+    const burst = (dur: number, vol: number, f0: number, f1: number) => {
+      const buf = this.noiseBuffer();
+      if (!buf) return;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(f0, t);
+      filter.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(vol, t);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(filter).connect(gain).connect(master);
+      src.start(t);
+      src.stop(t + dur + 0.02);
+    };
+    switch (kind) {
+      case 'explosion':
+        burst(0.75, 0.9, 2400, 70);
+        tone('sine', 130, 32, 0.65, 0.8);
+        break;
+      case 'zap':
+        tone('sawtooth', 1600, 160, 0.24, 0.16);
+        burst(0.1, 0.12, 6000, 1500);
+        break;
+      case 'teleport':
+        tone('sine', 240, 1400, 0.2, 0.22);
+        tone('triangle', 1400, 300, 0.2, 0.14, 0.2);
+        break;
+      case 'tick':
+        tone('square', 920, 920, 0.05, 0.1);
+        break;
+      case 'gate':
+        tone('square', 150, 60, 0.14, 0.18);
+        burst(0.08, 0.15, 900, 200);
+        break;
+      case 'spike':
+        burst(0.1, 0.28, 3200, 1200);
+        break;
+      case 'poison':
+        tone('sawtooth', 200, 55, 0.55, 0.18);
+        tone('sine', 420, 110, 0.5, 0.12, 0.05);
+        break;
+    }
   }
 
   /** Bucle de fondo: sirena (stage 0–4 según puntos restantes), asustado u ojos. null lo detiene. */

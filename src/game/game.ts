@@ -15,12 +15,13 @@ import { buildLevel } from './level/levels';
 import { nearestTile } from './level/placement';
 import type { LevelDef } from './level/schema';
 import { Maze } from './maze/maze';
-import { renderWalls } from './maze/render';
-import { createMechanics, type Mechanic } from './mechanics';
+import { WallRenderer } from './maze/render';
+import { createMechanics, type Mechanic, type MechanicEnv } from './mechanics';
 import { Mission } from './missions';
 import { createRng, type Rng } from './random';
 import { DIFFICULTIES, DIFFICULTY_PRESETS, FRUIT_POINTS, GHOST_POINTS, GLOBAL_RELEASE, fruitForLevel, getLevelRules, type Difficulty, type LevelRules } from './rules';
 import { drawFruit, drawGhost, drawPac, drawPacDeath, type GhostLook } from './sprites';
+import { EFFECT_INFO, ViewEffects } from './viewEffects';
 
 type State = 'title' | 'ready' | 'play' | 'ghostEaten' | 'dying' | 'clear' | 'gameover' | 'victory' | 'paused';
 
@@ -48,6 +49,9 @@ const FRUIT_TICKS = 9 * TICK_RATE + 30;
 const MESSAGE_Y = 20 * TILE + 1;
 const MAX_FRUITS_SHOWN = 4;
 const MAX_LIVES_SHOWN = 4;
+
+const MAZE_AREA = { w: SCREEN_W, h: 31 * TILE };
+const MAZE_CENTER = { x: SCREEN_W / 2, y: MAZE_TOP + (31 * TILE) / 2 };
 
 const GHOST_NAMES: GhostName[] = ['blinky', 'pinky', 'inky', 'clyde'];
 const HOUSE_ORDER: Exclude<GhostName, 'blinky'>[] = ['pinky', 'inky', 'clyde'];
@@ -80,11 +84,16 @@ const readHighScore = (): number => {
 export class Game {
   private levelDef!: LevelDef;
   private maze!: Maze;
+  private wallRenderer!: WallRenderer;
   private walls!: HTMLCanvasElement;
+  /** Versión del laberinto con la que se dibujaron las paredes (cambia al explotar una bomba). */
+  private wallsVersion = 0;
   private wallsWhite: HTMLCanvasElement | null = null;
   private mission!: Mission;
   private mechanics: Mechanic[] = [];
   private helpers = new FamilyHelpers();
+  private view = new ViewEffects();
+  private seenDirectionSeq = 0;
   private pac = new PacMan(ORIGINAL_PAC_SPAWN.x, ORIGINAL_PAC_SPAWN.y);
   private ghosts = GHOST_NAMES.map((n) => new Ghost(n));
   private rng: Rng = createRng(Date.now());
@@ -108,6 +117,8 @@ export class Game {
   /** Tarjeta de inicio de nivel visible durante el "ready". */
   private cardActive = false;
   private timeUp = false;
+  /** ?quick: sin tarjeta de nivel ni espera de la melodía (pruebas y capturas). */
+  private quick = false;
   /** Último checkpoint guardado (se carga al abrir el juego). */
   private checkpoint: Checkpoint | null = loadCheckpoint();
   /** Opción elegida en el título: 0 = nueva partida, 1 = continuar. */
@@ -138,6 +149,7 @@ export class Game {
   ) {
     this.loadLevel(1);
     const params = new URLSearchParams(location.search);
+    this.quick = params.has('quick');
     // ?autostart salta la pantalla de título; ?level=N empieza en ese nivel (pruebas y capturas).
     if (params.has('autostart')) this.startGame(Number(params.get('level')) || 1);
   }
@@ -280,14 +292,60 @@ export class Game {
     const def = buildLevel(n);
     if (!this.levelDef || this.levelDef.level !== def.level) {
       this.maze = new Maze(def.maze, ORIGINAL_PAC_SPAWN);
-      this.walls = renderWalls(this.maze, def.wallColor);
+      this.wallRenderer = new WallRenderer(this.maze);
+      this.walls = this.wallRenderer.render(def.wallColor);
       this.wallsWhite = null;
+      this.wallsVersion = this.maze.version;
+    } else {
+      // Mismo laberinto otra vez (reinicio): se devuelven las paredes que derribaron las bombas.
+      this.maze.resetDynamic();
     }
     this.levelDef = def;
+    this.view.clear();
+    this.syncWalls();
     this.rules = getLevelRules(def.arcadeLevel, this.difficulty);
     this.mission = new Mission(def.mission, def.maze, createRng(def.level * 7919));
     this.mechanics = createMechanics(def.mechanics, def.maze, createRng(def.level * 104729 + 1));
     this.helpers.reset();
+  }
+
+  /** Redibuja las paredes si una explosión (o un reinicio) las ha cambiado. */
+  private syncWalls(): void {
+    if (this.maze.version === this.wallsVersion) return;
+    this.wallRenderer.refresh(this.maze.consumeChanged());
+    this.walls = this.wallRenderer.render(this.levelDef.wallColor);
+    this.wallsWhite = null;
+    this.wallsVersion = this.maze.version;
+  }
+
+  private mechanicEnv(): MechanicEnv {
+    return {
+      maze: this.maze,
+      pac: this.pac,
+      ghosts: this.ghosts,
+      view: this.view,
+      rng: this.rng,
+      killGhost: (g) => this.killGhostByHazard(g),
+      sfx: (kind) => this.audio.sfx(kind),
+      popup: (text, x, y) => this.popups.push({ x, y, text, ticks: 110 }),
+    };
+  }
+
+  /** Un peligro del nivel (bomba…) mata a un fantasma: se convierte en ojos y da puntos. */
+  private killGhostByHazard(g: Ghost): void {
+    if (g.state !== 'active') return;
+    g.state = 'eaten';
+    g.frightened = false;
+    this.addScore(200);
+    this.mission.onGhostEaten();
+    this.popups.push({ x: g.x, y: g.y, text: '200', ticks: GHOST_EATEN_TICKS });
+  }
+
+  /** Un peligro del nivel mata a Pac-Man. */
+  private killPac(): void {
+    this.audio.setAmbient(null);
+    this.state = 'dying';
+    this.timer = 0;
   }
 
   private startLevel(): void {
@@ -314,13 +372,16 @@ export class Game {
     this.popups = [];
     this.eatenGhost = null;
     this.timeUp = false;
+    this.view.clear();
+    if (!newLevel) for (const m of this.mechanics) m.onRespawn?.(this.mechanicEnv());
     this.initBlinky();
     this.audio.setAmbient(null);
     this.state = 'ready';
-    this.cardActive = newLevel;
-    this.timer = newLevel ? CARD_TICKS + READY_TICKS : READY_TICKS;
+    this.cardActive = newLevel && !this.quick;
+    this.timer = this.quick ? 10 : newLevel ? CARD_TICKS + READY_TICKS : READY_TICKS;
     if (this.introJingle) {
       this.introJingle = false;
+      if (this.quick) return;
       this.audio.play('start');
       // Si la melodía ya cargó, la espera dura lo que ella (≈4 s en el arcade).
       this.timer = Math.max(this.timer, Math.round(this.audio.duration('start') * TICK_RATE));
@@ -390,11 +451,18 @@ export class Game {
 
   private pacSpeed(): number {
     const pct = this.frightTicks > 0 ? this.rules.pacFrightSpeed : this.rules.pacSpeed;
-    return (BASE_SPEED * pct) / TICK_RATE;
+    let factor = this.view.speedFactor;
+    for (const m of this.mechanics) factor *= m.pacSpeedFactor?.(this.pac) ?? 1;
+    return (BASE_SPEED * pct * factor) / TICK_RATE;
   }
 
   private updatePlay(): void {
-    if (this.input.direction !== null) this.pac.want = this.input.direction;
+    // Solo las pulsaciones nuevas se traducen: así un efecto de mando no reinterpreta lo ya pulsado.
+    if (this.input.directionSeq !== this.seenDirectionSeq) {
+      this.seenDirectionSeq = this.input.directionSeq;
+      if (this.input.direction !== null) this.pac.want = this.view.mapInput(this.input.direction);
+    }
+    this.view.update();
 
     if (this.eatPause > 0) {
       this.eatPause--;
@@ -403,8 +471,13 @@ export class Game {
       this.eat();
     }
 
-    const env = { maze: this.maze, pac: this.pac, ghosts: this.ghosts };
+    const env = this.mechanicEnv();
     for (const m of this.mechanics) m.update(env);
+    this.syncWalls();
+    if (this.mechanics.some((m) => m.hitsPac?.(this.pac))) {
+      this.killPac();
+      return;
+    }
     this.mission.update(this.pac);
     if (this.mission.consumeEnergizerRespawn()) this.maze.respawnEnergizers();
 
@@ -603,9 +676,7 @@ export class Game {
         this.eatGhost(g);
         return true;
       }
-      this.audio.setAmbient(null);
-      this.state = 'dying';
-      this.timer = 0;
+      this.killPac();
       return true;
     }
     return false;
@@ -669,8 +740,11 @@ export class Game {
       return;
     }
 
+    // Capa del laberinto: es la que giran el espejo y los fenómenos; el HUD y los textos no se mueven.
+    ctx.save();
+    this.view.applyMazeTransform(ctx, MAZE_CENTER.x, MAZE_CENTER.y, MAZE_AREA.w, MAZE_AREA.h);
     const flashWhite = this.state === 'clear' && Math.floor(this.timer / 15) % 2 === 0;
-    if (flashWhite) this.wallsWhite ??= renderWalls(this.maze, '#ffffff');
+    if (flashWhite) this.wallsWhite ??= this.wallRenderer.render('#ffffff');
     ctx.drawImage(flashWhite ? this.wallsWhite! : this.walls, 0, MAZE_TOP, this.maze.cols * TILE, this.maze.rows * TILE);
     if (this.state !== 'clear') {
       for (const m of this.mechanics) m.draw(ctx, this.frame);
@@ -679,10 +753,13 @@ export class Game {
     }
     if (this.fruitTicks > 0 && this.state !== 'clear') drawFruit(ctx, this.rules.fruit, FRUIT_X, MAZE_TOP + FRUIT_Y);
     this.helpers.draw(ctx, this.frame);
+    if (this.state !== 'clear') for (const m of this.mechanics) m.drawOver?.(ctx, this.frame);
 
     const hideGhosts = this.state === 'clear' || (this.state === 'dying' && this.timer >= DEATH_FREEZE);
     if (!hideGhosts) this.drawGhosts(ctx);
     this.drawPac(ctx);
+    this.drawDarkness(ctx);
+    ctx.restore();
     this.drawPopups(ctx);
 
     const cardVisible = this.state === 'ready' && this.cardActive && this.timer > READY_TICKS;
@@ -721,10 +798,31 @@ export class Game {
     drawPac(ctx, this.pac.x, y, this.pac.dir, anim);
   }
 
+  /** Efecto "oscuridad": solo se ve un círculo alrededor de Pac-Man. */
+  private drawDarkness(ctx: CanvasRenderingContext2D): void {
+    const a = this.view.darkAmount;
+    if (a < 0.01) return;
+    const x = this.pac.x;
+    const y = MAZE_TOP + this.pac.y;
+    const g = ctx.createRadialGradient(x, y, 16, x, y, 56);
+    g.addColorStop(0, 'rgba(0,0,8,0)');
+    g.addColorStop(1, `rgba(0,0,8,${0.97 * a})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(-20, MAZE_TOP - 20, SCREEN_W + 40, MAZE_AREA.h + 40);
+  }
+
+  /** Intensidad de la visión borrosa (0–1) para el postproceso del lienzo. */
+  get wobbleAmount(): number {
+    return this.view.wobbleAmount;
+  }
+
   private drawPopups(ctx: CanvasRenderingContext2D): void {
     for (const p of this.popups) {
       const w = p.text.length * CHAR_W;
-      drawText(ctx, p.text, Math.round(p.x - w / 2), Math.round(MAZE_TOP + p.y - 4), '#27e8ff');
+      const at = this.view.toScreen(p.x, MAZE_TOP + p.y, MAZE_CENTER.x, MAZE_CENTER.y, MAZE_AREA.w, MAZE_AREA.h);
+      // Sin salirse de la pantalla (los avisos de efecto son largos).
+      const x = Math.min(Math.max(at.x - w / 2, 2), SCREEN_W - w - 2);
+      drawText(ctx, p.text, Math.round(x), Math.round(at.y - 4), p.text.length > 5 ? '#e6b8ff' : '#27e8ff');
     }
   }
 
@@ -738,6 +836,12 @@ export class Game {
     if (this.state === 'title' || this.state === 'victory') return;
     drawTextRight(ctx, `MUNDO ${this.levelDef.world}`, SCREEN_W - 4, 0, this.levelDef.wallColor);
     drawTextRight(ctx, `NIVEL ${this.levelDef.stage}`, SCREEN_W - 4, TILE, COLORS.text);
+    const effect = this.view.active()[0];
+    if (effect) {
+      const info = EFFECT_INFO[effect.kind];
+      const blink = effect.seconds > 2 || Math.floor(this.frame / 8) % 2 === 0;
+      if (blink) drawText(ctx, `${info.label} ${effect.seconds}`, 40, 15, info.color);
+    }
     this.drawHelperBadge(ctx, 10, 20, 'A', FAMILY.aina.color, this.helpers.ainaReady);
     this.drawHelperBadge(ctx, 24, 20, 'L', FAMILY.aleix.color, this.helpers.aleixReady);
   }

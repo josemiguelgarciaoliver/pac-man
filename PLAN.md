@@ -334,6 +334,38 @@ La familia no es un adorno de un mundo: está presente en **todos** los niveles,
 8. **Final:** el nivel 100 termina con Cely rescatada y la familia reunida; los créditos incluyen una dedicatoria personalizable.
 
 **Reglas de diseño:** los ayudantes nunca vuelven trivial el juego (una carga por nivel, sin efecto sobre jefes en su fase final y desactivables en "modo clásico"). La familia no sustituye a los personajes del arcade: Pac-Man y los fantasmas conservan su aspecto original.
+
+### 4.6 Catálogo de elementos del laberinto (mecánicas)
+
+Cada mecánica es un *plugin* (`src/game/mechanics/`) descrito por datos en el nivel y con su propio dibujo y sonido sintetizado. Los peligros avisan siempre antes de actuar y se reinician de forma justa al perder una vida.
+
+| Elemento | Qué hace | Aparece en |
+|---|---|---|
+| **Cintas transportadoras** | Empujan a Pac-Man (y opcionalmente a los fantasmas); pueden invertirse con aviso parpadeante o encadenarse en sentidos alternos | M3, M6 (corrientes), M10 |
+| **Bombas** | Se arman al acercarse Pac-Man, muestran la zona de peligro y la cuenta atrás, y estallan: **derriban paredes** (abren atajos), matan a Pac-Man si sigue dentro y convierten en ojos a los fantasmas | M1 (tutorial), M4 (deshielo), M5 (muros falsos), M7 (derrumbes), M9, M10 |
+| **Sierras** | Discos con dientes que patrullan un pasillo de punta a punta sobre su carril | M3, M5 (escarabajos), M6 (medusas), M7 (rocas), M8 (drones), M9, M10 |
+| **Torretas** | Empotradas en la pared, disparan **de pared a pared** a lo largo de un pasillo; la línea de tiro parpadea antes del disparo | M3, M4, M5 (dardos), M6, M7, M8 (láseres), M9 (ballestas), M10 |
+| **Paredes móviles / puertas** | Bloques de piedra que se deslizan para cerrar un pasillo y lo reabren; nunca cierran encima de alguien | M2 (enredaderas), M3, M6 (marea), M9 (rastrillos) |
+| **Pinchos** | Placa con agujeros que avisa y saca pinchos con ritmo (prensas, géiseres…) | M1, M3, M4, M5, M7, M9, M10 |
+| **Portales** | Parejas de portales: entras por uno y sales por el otro | M1, M2 (setas mágicas), M4, M6 (remolinos), M8 (agujeros de gusano), M9, M10 |
+| **Barro** | Charcos que frenan a Pac-Man y a los fantasmas | M1, M2, M4, M5, M8, M10 |
+| **Setas tóxicas** | Al comerlas dan un efecto al azar de la lista del nivel (ver abajo) y vuelven a crecer a los 25 s | M2, M8, M9, M10 |
+| **Fenómenos** | El propio nivel provoca cada cierto tiempo un efecto: niebla, ventisca, laberinto que gira, mundo en espejo… | M2, M4, M5, M6, M8, M9, M10 |
+
+**Efectos de estado** (setas y fenómenos), todos temporales y con el aviso del nombre y los segundos que quedan:
+
+| Efecto | Qué ocurre |
+|---|---|
+| Visión borrosa | La imagen ondula como bajo el agua |
+| Controles al revés | Arriba es abajo e izquierda es derecha |
+| Controles girados | Cada dirección se desvía 90° |
+| Laberinto girado | El laberinto gira 90° (los controles siguen lo que ves en pantalla) |
+| Mundo en espejo | La imagen se refleja de izquierda a derecha |
+| Oscuridad | Solo se ve un círculo alrededor de Pac-Man |
+| Turbo | (efecto bueno) Pac-Man corre un 30 % más |
+
+**Ideas para ampliar** (no implementadas): hielo (resbalar hasta el siguiente cruce), viento, suelo que se derrumba, lava que sube por filas, gravedad invertida, láseres con ritmo, fantasmas invisibles, espejos que engañan a la IA, rocas que ruedan, minas ocultas, imanes que atraen los puntos.
+
 ---
 
 ## 5. Gráficos y sonido

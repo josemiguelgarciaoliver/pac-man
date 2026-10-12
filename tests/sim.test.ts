@@ -1,14 +1,31 @@
 import { describe, expect, it, vi } from 'vitest';
+import { LEVEL_SPECIALS } from '../src/data/levelSpecials';
 import { Dir } from '../src/game/constants';
 import { createRng } from '../src/game/random';
 
 // El dibujo de paredes necesita un canvas real; la simulación solo necesita la lógica.
-vi.mock('../src/game/maze/render', () => ({ renderWalls: () => ({}) }));
+vi.mock('../src/game/maze/render', () => ({
+  renderWalls: () => ({}),
+  WallRenderer: class {
+    refresh() {}
+    render() {
+      return {};
+    }
+  },
+}));
 
 const { Game } = await import('../src/game/game');
 
 class FakeInput {
-  direction: Dir | null = null;
+  directionSeq = 0;
+  private dir: Dir | null = null;
+  get direction(): Dir | null {
+    return this.dir;
+  }
+  set direction(d: Dir | null) {
+    this.dir = d;
+    if (d !== null) this.directionSeq++;
+  }
   private flags = { press: false, pause: false, mute: false, aina: false, aleix: false };
   poll() {}
   consumePress() {
@@ -46,6 +63,7 @@ class FakeAudio {
   muted = false;
   play() {}
   waka() {}
+  sfx() {}
   setAmbient() {}
   suspend() {}
   resume() {}
@@ -81,8 +99,8 @@ function newGame(level: number, storage: unknown = { getItem: () => null, setIte
 const DIRS = [Dir.Up, Dir.Left, Dir.Down, Dir.Right];
 
 describe('simulación sin interfaz', () => {
-  // Un nivel por mundo, más los que llevan misión y mecánicas.
-  const levels = [1, 2, 5, 8, 14, 21, 25, 28, 35, 45, 49, 58, 65, 75, 85, 92, 100];
+  // El nivel 1, un nivel liso y todos los que llevan misión o mecánicas especiales.
+  const levels = [1, 2, ...Object.keys(LEVEL_SPECIALS).map(Number)];
 
   for (const level of levels) {
     it(`el nivel ${level} aguanta 6000 ticks de un bot aleatorio sin romper reglas`, () => {

@@ -9,6 +9,28 @@ import { setupControls } from './ui/controls';
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d', { alpha: false })!;
 
+/** Visión borrosa: se redibuja la imagen en franjas horizontales desplazadas con una onda. */
+let scratch: HTMLCanvasElement | null = null;
+function applyWobble(amount: number, now: number): void {
+  if (!scratch) scratch = document.createElement('canvas');
+  if (scratch.width !== canvas.width || scratch.height !== canvas.height) {
+    scratch.width = canvas.width;
+    scratch.height = canvas.height;
+  }
+  const sctx = scratch.getContext('2d')!;
+  sctx.drawImage(canvas, 0, 0);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const k = canvas.width / SCREEN_W;
+  const strip = Math.max(2, Math.round(k * 1.5));
+  const t = now / 1000;
+  for (let y = 0; y < canvas.height; y += strip) {
+    const dx = Math.sin(y / (k * 11) + t * 4.2) * amount * k * 3.2 + Math.sin(y / (k * 4.5) - t * 2.6) * amount * k * 1.2;
+    ctx.drawImage(scratch, 0, y, canvas.width, strip, dx, y, canvas.width, strip);
+  }
+}
+
 const input = new Input(document.body);
 const audio = new AudioManager();
 const controls = setupControls(input, audio);
@@ -47,6 +69,7 @@ startLoop(
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     game.render(ctx);
+    if (game.wobbleAmount > 0.01) applyWobble(game.wobbleAmount, performance.now());
     controls.update(game.helperState());
   },
 );
