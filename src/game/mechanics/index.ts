@@ -8,6 +8,7 @@ import type { Mechanic } from './mechanic';
 import { MushroomMechanic } from './mushroom';
 import { PhenomenonMechanic } from './phenomenon';
 import { PuddleMechanic } from './puddle';
+import { RageMechanic } from './rage';
 import { SawbladeMechanic } from './sawblade';
 import { SpikesMechanic } from './spikes';
 import { TeleportMechanic } from './teleport';
@@ -37,6 +38,8 @@ export function createMechanics(defs: readonly MechanicDef[], lines: readonly st
         return new MushroomMechanic(def, lines, rng);
       case 'phenomenon':
         return new PhenomenonMechanic(def);
+      case 'rage':
+        return new RageMechanic(def, lines, rng);
       case 'boost':
         return new BoostMechanic(def, lines, rng);
       case 'puddle':

@@ -29,6 +29,7 @@ const shrooms = (count: number, effects: EffectKind[] = ['wobble', 'invert', 'sc
 });
 const phenomenon = (effect: EffectKind, everySeconds: number, durationSeconds: number): MechanicDef => ({ type: 'phenomenon', effect, everySeconds, durationSeconds });
 const mud = (count: number): MechanicDef => ({ type: 'puddle', count });
+const furia = (count = 1, seconds = 6): MechanicDef => ({ type: 'rage', count, seconds });
 const bolt = (count = 1, seconds = 6): MechanicDef => ({ type: 'boost', count, seconds });
 
 export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
@@ -157,4 +158,13 @@ export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
 for (const n of [...Array.from({ length: 20 }, (_, i) => 4 + i * 5), 100]) {
   const entry = (LEVEL_SPECIALS[n] ??= {});
   entry.mechanics = [...(entry.mechanics ?? []), bolt(n >= 50 ? 2 : 1, n >= 50 ? 7 : 6)];
+}
+
+/**
+ * Trampas de furia: aparecen en niveles intercalados (16, 23, 27…) a partir del mundo 2; más y más
+ * largas conforme avanza el juego. Se añaden a lo que ya tenga el nivel.
+ */
+for (const n of [16, 23, 27, 33, 37, 43, 48, 53, 57, 63, 68, 73, 78, 83, 88, 93, 97, 99, 100]) {
+  const entry = (LEVEL_SPECIALS[n] ??= {});
+  entry.mechanics = [...(entry.mechanics ?? []), furia(n >= 60 ? 2 : 1, n >= 80 ? 8 : 6)];
 }

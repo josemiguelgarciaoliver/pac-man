@@ -13,6 +13,7 @@ import type { MechanicEnv } from '../src/game/mechanics/mechanic';
 import { MushroomMechanic } from '../src/game/mechanics/mushroom';
 import { PhenomenonMechanic } from '../src/game/mechanics/phenomenon';
 import { PuddleMechanic } from '../src/game/mechanics/puddle';
+import { RageMechanic } from '../src/game/mechanics/rage';
 import { SawbladeMechanic } from '../src/game/mechanics/sawblade';
 import { SpikesMechanic } from '../src/game/mechanics/spikes';
 import { TeleportMechanic } from '../src/game/mechanics/teleport';
@@ -376,5 +377,56 @@ describe('supervelocidad', () => {
     expect(levelsWithBolt).toHaveLength(21);
     const shroom = buildLevel(20).mechanics.find((m) => m.type === 'mushroom');
     expect(shroom && shroom.type === 'mushroom' ? shroom.effects : []).not.toContain('boost');
+  });
+});
+
+describe('trampa de furia', () => {
+  const activate = (ghostsActive = 4) => {
+    const s = setup(16);
+    const rage = s.mechanics.find((m) => m instanceof RageMechanic) as RageMechanic;
+    s.ghosts.forEach((g, i) => (g.state = i < ghostsActive ? 'active' : 'house'));
+    const tile = rage.tiles[0];
+    return { s, rage, tile };
+  };
+
+  it('al pisarla enfurece a un solo fantasma, que corre más y avisa quién es', () => {
+    const { s, rage, tile } = activate();
+    s.place(tile.col, tile.row);
+    s.run(1);
+    expect(rage.angry).toHaveLength(1);
+    const angry = rage.angry[0];
+    const others = s.ghosts.filter((g) => g !== angry);
+    expect(rage.ghostSpeedDelta(angry)).toBeGreaterThan(0.5);
+    for (const o of others) expect(rage.ghostSpeedDelta(o)).toBe(0);
+    expect(s.popups.some((p) => p.includes('FURIOSO'))).toBe(true);
+  });
+
+  it('la furia dura unos segundos, no se repite al instante y se calma con un energizer', () => {
+    const { s, rage, tile } = activate();
+    s.place(tile.col, tile.row);
+    s.run(1);
+    s.run(1); // sigue pisando la trampa: no enfurece a otro
+    expect(rage.angry).toHaveLength(1);
+    const angry = rage.angry[0];
+    angry.frightened = true;
+    expect(rage.ghostSpeedDelta(angry)).toBe(0);
+    angry.frightened = false;
+    s.place(ORIGINAL_PAC_SPAWN.col, ORIGINAL_PAC_SPAWN.row);
+    s.run(60 * 7);
+    expect(rage.angry).toHaveLength(0);
+  });
+
+  it('no se gasta si no hay ningún fantasma suelto, y un fantasma comido deja de estar furioso', () => {
+    const none = activate(0);
+    none.s.place(none.tile.col, none.tile.row);
+    none.s.run(2);
+    expect(none.rage.angry).toHaveLength(0);
+
+    const { s, rage, tile } = activate();
+    s.place(tile.col, tile.row);
+    s.run(1);
+    rage.angry[0].state = 'eaten';
+    s.run(1);
+    expect(rage.angry).toHaveLength(0);
   });
 });

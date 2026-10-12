@@ -90,6 +90,12 @@ export const mechanicSchema = z.discriminatedUnion('type', [
     everySeconds: z.number().min(6).max(90),
     durationSeconds: z.number().min(3).max(40),
   }),
+  /** Trampa de furia: al pisarla, un fantasma al azar corre a supervelocidad unos segundos. */
+  z.object({
+    type: z.literal('rage'),
+    count: z.number().int().min(1).max(4),
+    seconds: z.number().min(3).max(12).default(6),
+  }),
   /** Rayos de supervelocidad: Pac-Man corre a toda máquina unos segundos. */
   z.object({
     type: z.literal('boost'),
