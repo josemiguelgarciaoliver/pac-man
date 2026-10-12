@@ -1,6 +1,6 @@
 export type SoundName = 'start' | 'waka' | 'eat_fruit' | 'eat_ghost' | 'extra_life' | 'intermission' | 'death';
 /** Efectos sintetizados de las mecánicas de nivel. */
-export type SfxKind = 'explosion' | 'zap' | 'teleport' | 'tick' | 'gate' | 'spike' | 'poison' | 'boost' | 'rage';
+export type SfxKind = 'explosion' | 'zap' | 'teleport' | 'tick' | 'gate' | 'spike' | 'poison' | 'boost' | 'rage' | 'summon';
 export type AmbientKind = 'siren' | 'power' | 'eyes';
 
 const FILES: SoundName[] = ['start', 'waka', 'eat_fruit', 'eat_ghost', 'extra_life', 'intermission', 'death'];
@@ -176,6 +176,12 @@ export class AudioManager {
         break;
       case 'spike':
         burst(0.1, 0.28, 3200, 1200);
+        break;
+      case 'summon':
+        tone('sine', 523, 523, 0.12, 0.16);
+        tone('sine', 659, 659, 0.12, 0.16, 0.1);
+        tone('sine', 784, 784, 0.12, 0.16, 0.2);
+        tone('triangle', 1047, 1047, 0.25, 0.14, 0.3);
         break;
       case 'rage':
         tone('sawtooth', 70, 200, 0.45, 0.22);

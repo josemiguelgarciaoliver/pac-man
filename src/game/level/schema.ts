@@ -90,17 +90,24 @@ export const mechanicSchema = z.discriminatedUnion('type', [
     everySeconds: z.number().min(6).max(90),
     durationSeconds: z.number().min(3).max(40),
   }),
+  /** Insignias de Aleix o Aina: invocan una miniatura que caza fantasmas unos segundos. */
+  z.object({
+    type: z.literal('companion'),
+    who: z.enum(['aleix', 'aina']),
+    count: z.number().int().min(1).max(3),
+    seconds: z.number().min(4).max(30).optional(),
+  }),
   /** Trampa de furia: al pisarla, un fantasma al azar corre a supervelocidad unos segundos. */
   z.object({
     type: z.literal('rage'),
     count: z.number().int().min(1).max(4),
     seconds: z.number().min(3).max(12).default(6),
   }),
-  /** Rayos de supervelocidad: Pac-Man corre a toda máquina unos segundos. */
+  /** Zapatillas rojas de supervelocidad: Pac-Man corre a toda máquina (1 minuto por defecto). */
   z.object({
     type: z.literal('boost'),
     count: z.number().int().min(1).max(4),
-    seconds: z.number().min(3).max(12).default(6),
+    seconds: z.number().min(3).max(90).default(60),
   }),
   /** Charcos de barro que frenan a todos. */
   z.object({

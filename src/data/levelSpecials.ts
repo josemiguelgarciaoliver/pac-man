@@ -29,8 +29,9 @@ const shrooms = (count: number, effects: EffectKind[] = ['wobble', 'invert', 'sc
 });
 const phenomenon = (effect: EffectKind, everySeconds: number, durationSeconds: number): MechanicDef => ({ type: 'phenomenon', effect, everySeconds, durationSeconds });
 const mud = (count: number): MechanicDef => ({ type: 'puddle', count });
+const companion = (who: 'aleix' | 'aina', count = 1): MechanicDef => ({ type: 'companion', who, count });
 const furia = (count = 1, seconds = 6): MechanicDef => ({ type: 'rage', count, seconds });
-const bolt = (count = 1, seconds = 6): MechanicDef => ({ type: 'boost', count, seconds });
+const bolt = (count = 1, seconds = 60): MechanicDef => ({ type: 'boost', count, seconds });
 
 export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
   // ── Mundo 1 — Arcade Clásico: los básicos, uno a uno ──
@@ -152,12 +153,12 @@ export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
 };
 
 /**
- * Rayos de supervelocidad: aparecen en un nivel de cada cinco (4, 9, 14…) y en el último, como
+ * Zapatillas rojas de supervelocidad (1 minuto): aparecen en un nivel de cada cinco (4, 9, 14…) y en el último, como
  * respiro y recompensa entre tanto peligro. Se añaden a lo que ya tenga el nivel.
  */
 for (const n of [...Array.from({ length: 20 }, (_, i) => 4 + i * 5), 100]) {
   const entry = (LEVEL_SPECIALS[n] ??= {});
-  entry.mechanics = [...(entry.mechanics ?? []), bolt(n >= 50 ? 2 : 1, n >= 50 ? 7 : 6)];
+  entry.mechanics = [...(entry.mechanics ?? []), bolt(n >= 50 ? 2 : 1)];
 }
 
 /**
@@ -167,4 +168,19 @@ for (const n of [...Array.from({ length: 20 }, (_, i) => 4 + i * 5), 100]) {
 for (const n of [16, 23, 27, 33, 37, 43, 48, 53, 57, 63, 68, 73, 78, 83, 88, 93, 97, 99, 100]) {
   const entry = (LEVEL_SPECIALS[n] ??= {});
   entry.mechanics = [...(entry.mechanics ?? []), furia(n >= 60 ? 2 : 1, n >= 80 ? 8 : 6)];
+}
+
+/**
+ * Miniaturas de ayuda: Aleix en los niveles que acaban en 6 (6, 16, 26…), Aina en los que acaban en 1
+ * desde el 11, y los dos juntos en los que acaban en 0 (los niveles de jefe) y en el 100.
+ */
+for (let n = 6; n <= 100; n++) {
+  const last = n % 10;
+  const helpers: MechanicDef[] = [];
+  if (last === 6) helpers.push(companion('aleix'));
+  else if (last === 1 && n >= 11) helpers.push(companion('aina'));
+  else if (last === 0) helpers.push(companion('aleix'), companion('aina'));
+  if (helpers.length === 0) continue;
+  const entry = (LEVEL_SPECIALS[n] ??= {});
+  entry.mechanics = [...(entry.mechanics ?? []), ...helpers];
 }

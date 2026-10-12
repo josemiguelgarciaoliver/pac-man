@@ -7,6 +7,7 @@ import { buildLevel } from '../src/game/level/levels';
 import { Maze } from '../src/game/maze/maze';
 import { createMechanics } from '../src/game/mechanics';
 import { BombMechanic } from '../src/game/mechanics/bomb';
+import { CompanionMechanic } from '../src/game/mechanics/companion';
 import { BoostMechanic } from '../src/game/mechanics/boost';
 import { GateMechanic } from '../src/game/mechanics/gate';
 import type { MechanicEnv } from '../src/game/mechanics/mechanic';
@@ -342,7 +343,7 @@ describe('todos los niveles con peligros', () => {
 });
 
 describe('supervelocidad', () => {
-  it('coger el rayo da supervelocidad con aviso y tarda en reaparecer', () => {
+  it('coger las zapatillas da supervelocidad durante un minuto, con aviso, y tardan en reaparecer', () => {
     const s = setup(4);
     const boost = s.mechanics.find((m) => m instanceof BoostMechanic) as BoostMechanic;
     expect(boost).toBeDefined();
@@ -351,7 +352,8 @@ describe('supervelocidad', () => {
     s.place(tile.col, tile.row);
     s.run(1);
     expect(s.view.has('boost')).toBe(true);
-    expect(s.view.speedFactor).toBeGreaterThan(1.5);
+    expect(s.view.speedFactor).toBeGreaterThan(1.4);
+    expect(s.view.secondsLeft('boost')).toBe(60);
     expect(s.popups).toContain('SUPERVELOCIDAD');
     // Ya no está: pasar otra vez no vuelve a dar nada.
     s.view.clear();
@@ -370,7 +372,7 @@ describe('supervelocidad', () => {
     expect(v.speedFactor).toBe(turbo);
   });
 
-  it('hay un rayo cada cinco niveles y en el último, y no sale entre los efectos de las setas', () => {
+  it('hay unas zapatillas cada cinco niveles y en el último, y no salen entre los efectos de las setas', () => {
     const levelsWithBolt = Array.from({ length: 100 }, (_, i) => i + 1).filter((n) => buildLevel(n).mechanics.some((m) => m.type === 'boost'));
     expect(levelsWithBolt.slice(0, 4)).toEqual([4, 9, 14, 19]);
     expect(levelsWithBolt).toContain(100);
@@ -428,5 +430,73 @@ describe('trampa de furia', () => {
     rage.angry[0].state = 'eaten';
     s.run(1);
     expect(rage.angry).toHaveLength(0);
+  });
+});
+
+describe('miniaturas de Aleix y Aina', () => {
+  const find = (level: number, who: 'aleix' | 'aina') => {
+    const s = setup(level);
+    const defs = buildLevel(level).mechanics;
+    const idx = defs.findIndex((m) => m.type === 'companion' && m.who === who);
+    return { s, c: s.mechanics[idx] as CompanionMechanic, idx };
+  };
+
+  it('Aleix aparece en los niveles que acaban en 6 y Aina en los que acaban en 1; los dos en los de jefe', () => {
+    const who = (n: number) => buildLevel(n).mechanics.filter((m) => m.type === 'companion').map((m) => (m.type === 'companion' ? m.who : ''));
+    expect(who(6)).toEqual(['aleix']);
+    expect(who(16)).toEqual(['aleix']);
+    expect(who(11)).toEqual(['aina']);
+    expect(who(21)).toEqual(['aina']);
+    expect(who(1)).toEqual([]);
+    expect(who(10).sort()).toEqual(['aina', 'aleix']);
+    expect(who(100).sort()).toEqual(['aina', 'aleix']);
+  });
+
+  it('al coger la insignia aparece la miniatura y avisa', () => {
+    const { s, c } = find(6, 'aleix');
+    expect(c.active).toBeNull();
+    const tile = c.tiles[0];
+    s.place(tile.col, tile.row);
+    s.run(1);
+    expect(c.active).not.toBeNull();
+    expect(s.popups.some((p) => p.includes('ALEIX'))).toBe(true);
+  });
+
+  it('persigue a un fantasma y lo convierte en ojos al alcanzarlo', () => {
+    const { s, c } = find(6, 'aleix');
+    const tile = c.tiles[0];
+    s.place(tile.col, tile.row);
+    // Un fantasma suelto, lejos de Pac-Man.
+    const ghost = s.ghosts[0];
+    ghost.state = 'active';
+    ghost.x = cx(26);
+    ghost.y = cx(29);
+    for (const g of s.ghosts.slice(1)) g.state = 'house';
+    let caught = false;
+    for (let t = 0; t < 1800 && !caught; t++) {
+      // El fantasma se queda quieto: lo que se prueba es que la miniatura lo encuentra.
+      s.run(1);
+      caught = s.killed.includes(ghost);
+    }
+    expect(caught).toBe(true);
+  });
+
+  it('caduca a los segundos y se retira si Pac-Man pierde una vida', () => {
+    const { s, c } = find(16, 'aleix');
+    const tile = c.tiles[0];
+    s.place(tile.col, tile.row);
+    s.ghosts.forEach((g) => (g.state = 'house'));
+    s.run(1);
+    expect(c.active).not.toBeNull();
+    s.run(60 * 11);
+    expect(c.active).toBeNull();
+    s.place(tile.col, tile.row);
+    s.run(1); // la insignia aún no ha vuelto a crecer
+    expect(c.active).toBeNull();
+    const again = find(16, 'aleix');
+    again.s.place(again.c.tiles[0].col, again.c.tiles[0].row);
+    again.s.run(1);
+    for (const m of again.s.mechanics) m.onRespawn?.(again.s.env);
+    expect(again.c.active).toBeNull();
   });
 });
