@@ -141,3 +141,38 @@ describe('dificultad', () => {
     expect(getLevelRules(1).frightTicks).toBe(360);
   });
 });
+
+describe('ojos de fantasma comido', () => {
+  it('vuelven a casa desde cualquier casilla de los 100 laberintos (sin dar vueltas en bucle)', async () => {
+    const { buildLevel } = await import('../src/game/level/levels');
+    const { reachableTiles } = await import('../src/game/maze/generator');
+    const failures: string[] = [];
+    for (let level = 1; level <= 100; level++) {
+      const lines = buildLevel(level).maze;
+      const maze = new Maze(lines, ORIGINAL_PAC_SPAWN);
+      const env: MoveEnv = { maze, target: HOUSE_DOOR_TILE, rng: createRng(level), houseSpeed: 0.5 };
+      const reach = [...reachableTiles(lines)];
+      const rng = createRng(level * 31);
+      for (let i = 0; i < 12; i++) {
+        const k = reach[rng.int(reach.length)];
+        const col = k % 28;
+        const row = Math.floor(k / 28);
+        const dirs = [Dir.Up, Dir.Left, Dir.Down, Dir.Right].filter((d) => {
+          const v = [[0, -1], [-1, 0], [0, 1], [1, 0]][d];
+          return maze.isWalkable(col + v[0], row + v[1]);
+        });
+        if (dirs.length === 0) continue;
+        const g = new Ghost('blinky');
+        g.state = 'eaten';
+        g.spawnAt(env, col, row, dirs[rng.int(dirs.length)]);
+        let home = false;
+        for (let t = 0; t < 3000 && !home; t++) {
+          g.move(env, 1.6);
+          home = (g.state as GhostState) === 'leaving';
+        }
+        if (!home) failures.push(`nivel ${level} desde (${col},${row})`);
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+});

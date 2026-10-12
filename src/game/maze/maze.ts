@@ -14,6 +14,7 @@ export class Maze {
   /** Casillas no-pared que ningún actor puede alcanzar (se pintan como pared). */
   private readonly voidTiles = new Set<number>();
   private pellets = new Map<number, PelletKind>();
+  private distCache = new Map<number, Int16Array>();
   totalPellets = 0;
 
   constructor(lines: readonly string[], spawn: { col: number; row: number }) {
@@ -47,6 +48,37 @@ export class Maze {
       }
     }
     this.totalPellets = this.pellets.size;
+  }
+
+  /**
+   * Distancia en casillas (por el camino más corto, con túnel) desde cada casilla hasta (col,row).
+   * -1 = inalcanzable. Se calcula una vez por destino. Sirve para que los ojos vuelvan a casa sin
+   * quedarse dando vueltas, algo que la búsqueda "voraz" de los fantasmas no garantiza.
+   */
+  distancesTo(col: number, row: number): Int16Array {
+    const k = this.key(col, row);
+    const hit = this.distCache.get(k);
+    if (hit) return hit;
+    const dist = new Int16Array(this.cols * this.rows).fill(-1);
+    const queue: [number, number][] = [[col, row]];
+    dist[k] = 0;
+    for (let i = 0; i < queue.length; i++) {
+      const [c, r] = queue[i];
+      for (const [dc, dr] of [[0, -1], [-1, 0], [0, 1], [1, 0]]) {
+        let nc = c + dc;
+        const nr = r + dr;
+        if (nr < 0 || nr >= this.rows) continue;
+        if (nc < 0 || nc >= this.cols) {
+          if (!this.tunnelRows.has(nr)) continue;
+          nc = (nc + this.cols) % this.cols;
+        }
+        if (!this.isWalkable(nc, nr) || dist[this.key(nc, nr)] !== -1) continue;
+        dist[this.key(nc, nr)] = dist[this.key(c, r)] + 1;
+        queue.push([nc, nr]);
+      }
+    }
+    this.distCache.set(k, dist);
+    return dist;
   }
 
   /** Devuelve los energizers al laberinto (misiones de caza). */

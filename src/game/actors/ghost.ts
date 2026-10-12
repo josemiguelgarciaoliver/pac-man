@@ -205,6 +205,32 @@ export class Ghost {
     this.nextDir = this.chooseNext(env, col + d.x, row + d.y, this.dir);
   }
 
+  /** Los ojos siguen el camino más corto a la puerta: nunca se quedan orbitando un bloque. */
+  private chooseHome(env: MoveEnv, col: number, row: number, options: Dir[]): Dir {
+    const dist = env.maze.distancesTo(env.target.col, env.target.row);
+    let best = options[0];
+    let bestDist = Infinity;
+    for (const dir of options) {
+      const d = DIRS[dir];
+      const nc = (col + d.x + env.maze.cols) % env.maze.cols;
+      const v = dist[(row + d.y) * env.maze.cols + nc];
+      if (v >= 0 && v < bestDist) {
+        bestDist = v;
+        best = dir;
+      }
+    }
+    return best;
+  }
+
+  /** Coloca al fantasma en el centro de una casilla (para pruebas y simulaciones). */
+  spawnAt(env: MoveEnv, col: number, row: number, dir: Dir): void {
+    this.x = col * TILE + TILE / 2;
+    this.y = row * TILE + TILE / 2;
+    this.dir = dir;
+    const d = DIRS[dir];
+    this.nextDir = this.chooseNext(env, col + d.x, row + d.y, dir);
+  }
+
   /** Elige la salida de la casilla (col,row): la que deja más cerca del objetivo, sin dar la vuelta. */
   private chooseNext(env: MoveEnv, col: number, row: number, arrivalDir: Dir): Dir {
     const options: Dir[] = [];
@@ -218,6 +244,7 @@ export class Ghost {
     }
     if (options.length === 0) return opposite(arrivalDir);
     if (this.frightened && this.state === 'active') return options[env.rng.int(options.length)];
+    if (this.state === 'eaten') return this.chooseHome(env, col, row, options);
 
     let best = options[0];
     let bestDist = Infinity;
