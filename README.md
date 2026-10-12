@@ -27,5 +27,6 @@ Abre `/?autostart` para saltarte la pantalla de título.
 
 ## Estado
 
-Fase 0 y 1 hechas; Fase 2 en curso: laberinto original con paredes procedurales, movimiento
-de Pac-Man con cornering, puntos, energizers y puntuación. Aún sin fantasmas ni sonido.
+Fases 0 y 1 hechas; Fase 2 casi completa: laberinto original, Pac-Man, los 4 fantasmas con la IA del arcade
+(modos, casa, Cruise Elroy), frutas, vidas y muerte. Los sonidos originales están en `public/assets/audio/`
+(aún sin conectar al juego: Fase 3). Faltan las intermissions y el resto de mundos.

@@ -390,10 +390,10 @@ Cada fase acaba en un hito jugable y desplegado en GitHub Pages.
 ### Fase 2 — Pac-Man arcade fiel (laberinto original)
 - [x] Parser de laberintos ASCII y **render procedural de paredes** al estilo original.
 - [ ] Movimiento de Pac-Man: velocidades por tabla, *cornering*, buffer de giro y pausas al comer.
-- [ ] Los 4 fantasmas con su IA exacta, modos *scatter/chase/frightened/eaten*, casa y contadores, *Elroy*, túnel lento y zonas sin giro hacia arriba.
-- [~] Puntuación, frutas, vidas, vida extra, récord y HUD.
-- [ ] Secuencias: inicio, muerte, nivel completado y *intermissions*.
-- [ ] Tests de simulación contra comportamientos conocidos (p. ej. rutas de los fantasmas en el frame N).
+- [x] Los 4 fantasmas con su IA exacta, modos *scatter/chase/frightened/eaten*, casa y contadores, *Elroy*, túnel lento y zonas sin giro hacia arriba.
+- [x] Puntuación, frutas, vidas, vida extra, récord y HUD (frutas con sprites provisionales).
+- [~] Secuencias: muerte y nivel completado hechas; pendiente: *intermissions*.
+- [~] Tests de simulación contra comportamientos conocidos (hechos: objetivos de IA, tablas, zonas sin giro; pendiente: trazas frame a frame).
 - **Hito:** clon del arcade jugable de principio a fin, sin sonido.
 
 ### Fase 3 — Audio
