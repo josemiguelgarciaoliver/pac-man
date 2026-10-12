@@ -8,6 +8,7 @@ import { HOUSE_DOOR_TILE, SCATTER_TARGETS, chaseTarget, type GhostName, type Til
 import { Ghost, type MoveEnv } from './actors/ghost';
 import { PacMan } from './actors/pacman';
 import { BASE_SPEED, COLORS, Dir, MAZE_TOP, SCREEN_H, SCREEN_W, TICK_RATE, TILE } from './constants';
+import { CHECKPOINT_MIN_LIVES, clearCheckpoint, isCheckpointLevel, loadCheckpoint, saveCheckpoint, type Checkpoint } from './checkpoint';
 import { FamilyHelpers } from './familyHelpers';
 import { arcadeEquivalent } from './level/curve';
 import { buildLevel } from './level/levels';
@@ -107,6 +108,12 @@ export class Game {
   /** Tarjeta de inicio de nivel visible durante el "ready". */
   private cardActive = false;
   private timeUp = false;
+  /** Último checkpoint guardado (se carga al abrir el juego). */
+  private checkpoint: Checkpoint | null = loadCheckpoint();
+  /** Opción elegida en el título: 0 = nueva partida, 1 = continuar. */
+  private titleChoice = this.checkpoint ? 1 : 0;
+  /** El nivel que se acaba de completar guardó un checkpoint (para avisar en pantalla). */
+  private checkpointJustSaved = false;
 
   // Modos de los fantasmas
   private modeIndex = 0;
@@ -175,7 +182,10 @@ export class Game {
         if (--this.timer <= 0) this.nextLevel();
         break;
       case 'gameover':
-        if (--this.timer <= 0) this.state = 'title';
+        if (--this.timer <= 0) {
+          this.titleChoice = this.checkpoint ? 1 : 0;
+          this.state = 'title';
+        }
         break;
       case 'victory':
         if (--this.timer <= 0 || (pressed && this.timer < VICTORY_TICKS - 120)) this.state = 'title';
@@ -194,9 +204,14 @@ export class Game {
     return { aina: this.helpers.ainaReady, aleix: this.helpers.aleixReady };
   }
 
-  /** En el título, izquierda/derecha (teclas, swipe o cruceta) cambian la dificultad. */
+  /** Título: arriba/abajo eligen nueva partida o continuar; izquierda/derecha cambian la dificultad. */
   private updateTitle(pressed: boolean): void {
     const dir = this.input.direction;
+    if (this.checkpoint && (dir === Dir.Up || dir === Dir.Down)) {
+      this.titleChoice = this.titleChoice === 0 ? 1 : 0;
+      this.input.direction = null;
+      return;
+    }
     if (dir === Dir.Left || dir === Dir.Right) {
       const i = DIFFICULTIES.indexOf(this.difficulty);
       const n = DIFFICULTIES.length;
@@ -210,7 +225,10 @@ export class Game {
       return;
     }
     if (dir !== null) this.input.direction = null;
-    if (pressed && dir === null) this.startGame(1);
+    if (pressed && dir === null) {
+      if (this.checkpoint && this.titleChoice === 1) this.continueGame(this.checkpoint);
+      else this.startGame(1);
+    }
   }
 
   /** Pausa automática al perder el foco (no hace nada si no se está jugando). */
@@ -230,6 +248,31 @@ export class Game {
     this.level = Math.min(Math.max(Math.floor(level), 1), TOTAL_LEVELS);
     this.introJingle = true;
     this.startLevel();
+  }
+
+  /** Reanuda desde el último checkpoint: mismo nivel, puntuación y dificultad. */
+  private continueGame(cp: Checkpoint): void {
+    this.score = cp.score;
+    this.lives = Math.max(cp.lives, CHECKPOINT_MIN_LIVES);
+    this.level = cp.level;
+    this.difficulty = cp.difficulty;
+    this.introJingle = true;
+    this.startLevel();
+  }
+
+  /** Nivel superado: pasa a la pantalla de victoria del nivel y guarda checkpoint si toca. */
+  private completeLevel(): void {
+    this.audio.setAmbient(null);
+    this.state = 'clear';
+    this.timer = CLEAR_TICKS;
+    this.checkpointJustSaved = false;
+    const done = this.levelDef.level;
+    if (isCheckpointLevel(done)) {
+      this.checkpoint = { level: done + 1, score: this.score, lives: this.lives, difficulty: this.difficulty };
+      saveCheckpoint(this.checkpoint);
+      this.checkpointJustSaved = true;
+      this.audio.play('extra_life');
+    }
   }
 
   /** Carga laberinto, misión y mecánicas del nivel (el laberinto se reutiliza si no cambia). */
@@ -288,6 +331,8 @@ export class Game {
     if (this.level >= TOTAL_LEVELS) {
       this.state = 'victory';
       this.timer = VICTORY_TICKS;
+      this.checkpoint = null;
+      clearCheckpoint();
       this.audio.play('intermission');
       return;
     }
@@ -380,11 +425,7 @@ export class Game {
       this.timer = 0;
       return;
     }
-    if (this.mission.isComplete(this.pac, this.maze.pelletsLeft)) {
-      this.audio.setAmbient(null);
-      this.state = 'clear';
-      this.timer = CLEAR_TICKS;
-    }
+    if (this.mission.isComplete(this.pac, this.maze.pelletsLeft)) this.completeLevel();
   }
 
   /** Sonido de fondo con la misma prioridad que el arcade: ojos > asustados > sirena. */
@@ -590,11 +631,7 @@ export class Game {
       this.eatenGhost = null;
       this.state = 'play';
       // La misión puede completarse justo al comer al último fantasma.
-      if (this.mission.isComplete(this.pac, this.maze.pelletsLeft)) {
-        this.audio.setAmbient(null);
-        this.state = 'clear';
-        this.timer = CLEAR_TICKS;
-      }
+      if (this.mission.isComplete(this.pac, this.maze.pelletsLeft)) this.completeLevel();
     }
   }
 
@@ -652,6 +689,7 @@ export class Game {
     if (this.state === 'ready' && !cardVisible) drawTextCentered(ctx, 'READY!', SCREEN_W / 2, MESSAGE_Y, COLORS.ready);
     if (this.state === 'paused') drawTextCentered(ctx, 'PAUSE', SCREEN_W / 2, MESSAGE_Y, COLORS.ready);
     if (this.state === 'gameover') drawTextCentered(ctx, 'GAME  OVER', SCREEN_W / 2, MESSAGE_Y, '#ff2a2a');
+    if (this.state === 'clear' && this.checkpointJustSaved) this.drawCheckpointBanner(ctx);
     if (this.state === 'dying' && this.timeUp) drawTextCentered(ctx, 'TIME UP!', SCREEN_W / 2, MESSAGE_Y, '#ff2a2a');
     if (cardVisible) this.drawCard(ctx, Math.min(1, (this.timer - READY_TICKS) / 12));
     this.drawFooter(ctx);
@@ -758,16 +796,44 @@ export class Game {
     ctx.restore();
   }
 
+  /** Aviso de checkpoint guardado, con una bandera que ondea. */
+  private drawCheckpointBanner(ctx: CanvasRenderingContext2D): void {
+    const cx = SCREEN_W / 2;
+    const y = MESSAGE_Y - 2;
+    ctx.save();
+    ctx.fillStyle = 'rgba(2,3,28,0.92)';
+    ctx.beginPath();
+    ctx.roundRect(cx - 62, y - 7, 124, 24, 6);
+    ctx.fill();
+    ctx.strokeStyle = '#27e8ff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+    drawTextCentered(ctx, 'CHECKPOINT!', cx, y - 2, '#27e8ff');
+    drawTextCentered(ctx, `PROXIMO NIVEL ${this.levelDef.level + 1}`, cx, y + 8, COLORS.text);
+  }
+
   private drawTitle(ctx: CanvasRenderingContext2D): void {
     drawTextCentered(ctx, 'PAC-MAN', SCREEN_W / 2, 10 * TILE, COLORS.ready);
     drawTextCentered(ctx, '100 NIVELES  10 MUNDOS', SCREEN_W / 2, 12 * TILE, '#7fa0ff');
     drawTextCentered(ctx, 'CON CELY  AINA  Y ALEIX', SCREEN_W / 2, 14 * TILE, FAMILY.cely.color);
-    if (Math.floor(this.frame / 30) % 2 === 0) {
-      drawTextCentered(ctx, 'PUSH START', SCREEN_W / 2, 18 * TILE, COLORS.text);
+    const cp = this.checkpoint;
+    const blink = Math.floor(this.frame / 30) % 2 === 0;
+    if (cp) {
+      const options = ['NUEVA PARTIDA', `CONTINUAR  NIVEL ${cp.level}`];
+      options.forEach((text, i) => {
+        const on = i === this.titleChoice;
+        drawTextCentered(ctx, on ? `> ${text} <` : text, SCREEN_W / 2, (17 + i * 2) * TILE, on ? (blink ? COLORS.ready : COLORS.text) : '#7a80a8');
+      });
+      drawTextCentered(ctx, 'ARRIBA ABAJO ELIGE', SCREEN_W / 2, 21 * TILE, COLORS.dot);
+    } else {
+      if (blink) drawTextCentered(ctx, 'PUSH START', SCREEN_W / 2, 18 * TILE, COLORS.text);
+      drawTextCentered(ctx, 'TAP  KEY  BUTTON', SCREEN_W / 2, 21 * TILE, COLORS.dot);
     }
-    drawTextCentered(ctx, 'TAP  KEY  BUTTON', SCREEN_W / 2, 21 * TILE, COLORS.dot);
+    const continuing = !!cp && this.titleChoice === 1;
+    const shown = continuing ? cp!.difficulty : this.difficulty;
     drawTextCentered(ctx, 'DIFICULTAD', SCREEN_W / 2, 24 * TILE, '#7fa0ff');
-    drawTextCentered(ctx, `< ${DIFFICULTY_PRESETS[this.difficulty].label} >`, SCREEN_W / 2, 26 * TILE, COLORS.ready);
+    drawTextCentered(ctx, continuing ? DIFFICULTY_PRESETS[shown].label : `< ${DIFFICULTY_PRESETS[shown].label} >`, SCREEN_W / 2, 26 * TILE, continuing ? '#7a80a8' : COLORS.ready);
     drawTextCentered(ctx, 'Z AINA  X ALEIX  P PAUSA', SCREEN_W / 2, 29 * TILE, '#ffb347');
     drawTextCentered(ctx, this.audio.muted ? 'SOUND OFF  M' : 'SOUND ON  M', SCREEN_W / 2, 31 * TILE, '#7fa0ff');
   }

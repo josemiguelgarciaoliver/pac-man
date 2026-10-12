@@ -34,6 +34,9 @@ class FakeInput {
     this.flags.aleix = false;
     return v;
   }
+  press() {
+    this.flags.press = true;
+  }
   request(kind: 'aina' | 'aleix') {
     this.flags[kind] = true;
   }
@@ -62,9 +65,14 @@ interface Probe {
   score: number;
 }
 
-function newGame(level: number) {
-  (globalThis as unknown as { location: unknown }).location = { search: `?autostart&level=${level}` };
-  (globalThis as unknown as { localStorage: unknown }).localStorage = { getItem: () => null, setItem: () => {} };
+function memoryStorage() {
+  const data = new Map<string, string>();
+  return { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => void data.set(k, v), removeItem: (k: string) => void data.delete(k) };
+}
+
+function newGame(level: number, storage: unknown = { getItem: () => null, setItem: () => {}, removeItem: () => {} }, autostart = true) {
+  (globalThis as unknown as { location: unknown }).location = { search: autostart ? `?autostart&level=${level}` : '' };
+  (globalThis as unknown as { localStorage: unknown }).localStorage = storage;
   const input = new FakeInput();
   const game = new Game(input as never, new FakeAudio() as never);
   return { game, input, probe: game as unknown as Probe };
@@ -117,5 +125,64 @@ describe('simulación sin interfaz', () => {
       lastScore = probe.score;
     }
     expect(lastScore).toBeGreaterThan(300);
+  });
+});
+
+describe('checkpoints en el juego', () => {
+  type Internals = Probe & { completeLevel(): void; nextLevel(): void; checkpoint: unknown; titleChoice: number; lives: number; difficulty: string; levelDef: { level: number } };
+
+  it('completar un nivel par guarda el siguiente; uno impar no', () => {
+    const storage = memoryStorage();
+    const odd = newGame(1, storage);
+    (odd.game as unknown as Internals).completeLevel();
+    expect(storage.getItem('pacman.checkpoint')).toBeNull();
+
+    const even = newGame(2, storage);
+    const g = even.game as unknown as Internals;
+    g.score = 4560;
+    g.completeLevel();
+    expect(JSON.parse(storage.getItem('pacman.checkpoint')!)).toMatchObject({ level: 3, score: 4560 });
+  });
+
+  it('el título ofrece continuar y reanuda con puntuación y nivel guardados', () => {
+    const storage = memoryStorage();
+    storage.setItem('pacman.checkpoint', JSON.stringify({ level: 7, score: 9000, lives: 0, difficulty: 'normal' }));
+    const { game, input, probe } = newGame(1, storage, false);
+    const g = game as unknown as Internals;
+    expect(g.titleChoice).toBe(1); // preseleccionado
+    input.direction = Dir.Up; // cambia a «nueva partida» y vuelve
+    game.update();
+    expect(g.titleChoice).toBe(0);
+    input.direction = Dir.Down;
+    game.update();
+    expect(g.titleChoice).toBe(1);
+    input.press();
+    game.update();
+    expect(probe.level).toBe(7);
+    expect(probe.score).toBe(9000);
+    expect(g.lives).toBeGreaterThanOrEqual(2); // nunca se reanuda sin margen
+    expect(g.difficulty).toBe('normal');
+  });
+
+  it('«nueva partida» ignora el checkpoint y empieza en el nivel 1', () => {
+    const storage = memoryStorage();
+    storage.setItem('pacman.checkpoint', JSON.stringify({ level: 7, score: 9000, lives: 2, difficulty: 'easy' }));
+    const { game, input, probe } = newGame(1, storage, false);
+    input.direction = Dir.Up;
+    game.update();
+    input.press();
+    game.update();
+    expect(probe.level).toBe(1);
+    expect(probe.score).toBe(0);
+    expect(storage.getItem('pacman.checkpoint')).not.toBeNull(); // sigue guardado hasta el siguiente
+  });
+
+  it('terminar el nivel 100 borra el checkpoint', () => {
+    const storage = memoryStorage();
+    storage.setItem('pacman.checkpoint', JSON.stringify({ level: 99, score: 1, lives: 2, difficulty: 'easy' }));
+    const { game } = newGame(100, storage);
+    const g = game as unknown as Internals;
+    g.nextLevel();
+    expect(storage.getItem('pacman.checkpoint')).toBeNull();
   });
 });

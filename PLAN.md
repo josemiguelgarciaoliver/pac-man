@@ -428,7 +428,7 @@ Cada fase acaba en un hito jugable y desplegado en GitHub Pages.
 - [ ] Guardado de progreso, récords por nivel y ajustes (IndexedDB/localStorage).
 - [ ] Sistema de *cutscenes* para la historia (intermissions al estilo original).
 - [ ] **Álbum familiar** (fotos, cartas de Cely, recuerdos de jefes) y desbloqueos persistentes.
-- [ ] Pausa, reintentar y continuar (vidas por mundo).
+- [~] Pausa y **checkpoints**: se guarda un checkpoint al completar cada nivel par (nivel, puntuación, vidas y dificultad en localStorage); el título ofrece *Nueva partida* o *Continuar nivel N* y al terminar el juego se borra. Pendiente: reintentar nivel y vidas por mundo.
 - **Hito:** el bucle completo de juego funciona con niveles de prueba.
 
 ### Fase 7 — Contenido: Mundos 1–3
