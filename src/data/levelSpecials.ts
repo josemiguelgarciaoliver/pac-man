@@ -29,6 +29,7 @@ const shrooms = (count: number, effects: EffectKind[] = ['wobble', 'invert', 'sc
 });
 const phenomenon = (effect: EffectKind, everySeconds: number, durationSeconds: number): MechanicDef => ({ type: 'phenomenon', effect, everySeconds, durationSeconds });
 const mud = (count: number): MechanicDef => ({ type: 'puddle', count });
+const bolt = (count = 1, seconds = 6): MechanicDef => ({ type: 'boost', count, seconds });
 
 export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
   // ── Mundo 1 — Arcade Clásico: los básicos, uno a uno ──
@@ -148,3 +149,12 @@ export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
   99: { mechanics: [phenomenon('rotate', 12, 8), bombs(3, 2.5), shrooms(3)] },
   100: { mechanics: [turrets(4, 3.5), saws(4, 0.9), bombs(3, 2.5), shrooms(4, undefined, 9), phenomenon('rotate', 16, 7)] },
 };
+
+/**
+ * Rayos de supervelocidad: aparecen en un nivel de cada cinco (4, 9, 14…) y en el último, como
+ * respiro y recompensa entre tanto peligro. Se añaden a lo que ya tenga el nivel.
+ */
+for (const n of [...Array.from({ length: 20 }, (_, i) => 4 + i * 5), 100]) {
+  const entry = (LEVEL_SPECIALS[n] ??= {});
+  entry.mechanics = [...(entry.mechanics ?? []), bolt(n >= 50 ? 2 : 1, n >= 50 ? 7 : 6)];
+}

@@ -1,6 +1,7 @@
 import type { MechanicDef } from '../level/schema';
 import type { Rng } from '../random';
 import { BombMechanic } from './bomb';
+import { BoostMechanic } from './boost';
 import { ConveyorMechanic } from './conveyor';
 import { GateMechanic } from './gate';
 import type { Mechanic } from './mechanic';
@@ -36,6 +37,8 @@ export function createMechanics(defs: readonly MechanicDef[], lines: readonly st
         return new MushroomMechanic(def, lines, rng);
       case 'phenomenon':
         return new PhenomenonMechanic(def);
+      case 'boost':
+        return new BoostMechanic(def, lines, rng);
       case 'puddle':
         return new PuddleMechanic(def, lines, rng);
     }

@@ -7,6 +7,7 @@ import { buildLevel } from '../src/game/level/levels';
 import { Maze } from '../src/game/maze/maze';
 import { createMechanics } from '../src/game/mechanics';
 import { BombMechanic } from '../src/game/mechanics/bomb';
+import { BoostMechanic } from '../src/game/mechanics/boost';
 import { GateMechanic } from '../src/game/mechanics/gate';
 import type { MechanicEnv } from '../src/game/mechanics/mechanic';
 import { MushroomMechanic } from '../src/game/mechanics/mushroom';
@@ -336,5 +337,44 @@ describe('todos los niveles con peligros', () => {
       expect(kinds.size, `mundo ${w}`).toBeGreaterThanOrEqual(1);
     }
     expect(new Set(buildLevel(100).mechanics.map((m) => m.type)).size).toBeGreaterThanOrEqual(5);
+  });
+});
+
+describe('supervelocidad', () => {
+  it('coger el rayo da supervelocidad con aviso y tarda en reaparecer', () => {
+    const s = setup(4);
+    const boost = s.mechanics.find((m) => m instanceof BoostMechanic) as BoostMechanic;
+    expect(boost).toBeDefined();
+    const tile = boost.tiles[0];
+    expect(s.view.speedFactor).toBe(1);
+    s.place(tile.col, tile.row);
+    s.run(1);
+    expect(s.view.has('boost')).toBe(true);
+    expect(s.view.speedFactor).toBeGreaterThan(1.5);
+    expect(s.popups).toContain('SUPERVELOCIDAD');
+    // Ya no está: pasar otra vez no vuelve a dar nada.
+    s.view.clear();
+    s.run(5);
+    expect(s.view.has('boost')).toBe(false);
+  });
+
+  it('caduca y supera al turbo de las setas', () => {
+    const v = new ViewEffects();
+    v.add('turbo', 5);
+    const turbo = v.speedFactor;
+    v.add('boost', 1);
+    expect(v.speedFactor).toBeGreaterThan(turbo);
+    for (let i = 0; i < 70; i++) v.update();
+    expect(v.has('boost')).toBe(false);
+    expect(v.speedFactor).toBe(turbo);
+  });
+
+  it('hay un rayo cada cinco niveles y en el último, y no sale entre los efectos de las setas', () => {
+    const levelsWithBolt = Array.from({ length: 100 }, (_, i) => i + 1).filter((n) => buildLevel(n).mechanics.some((m) => m.type === 'boost'));
+    expect(levelsWithBolt.slice(0, 4)).toEqual([4, 9, 14, 19]);
+    expect(levelsWithBolt).toContain(100);
+    expect(levelsWithBolt).toHaveLength(21);
+    const shroom = buildLevel(20).mechanics.find((m) => m.type === 'mushroom');
+    expect(shroom && shroom.type === 'mushroom' ? shroom.effects : []).not.toContain('boost');
   });
 });

@@ -94,6 +94,8 @@ export class Game {
   private helpers = new FamilyHelpers();
   private view = new ViewEffects();
   private seenDirectionSeq = 0;
+  /** Últimas posiciones de Pac-Man (para la estela de la supervelocidad). */
+  private pacTrail: { x: number; y: number }[] = [];
   private pac = new PacMan(ORIGINAL_PAC_SPAWN.x, ORIGINAL_PAC_SPAWN.y);
   private ghosts = GHOST_NAMES.map((n) => new Ghost(n));
   private rng: Rng = createRng(Date.now());
@@ -463,6 +465,8 @@ export class Game {
       if (this.input.direction !== null) this.pac.want = this.view.mapInput(this.input.direction);
     }
     this.view.update();
+    this.pacTrail.push({ x: this.pac.x, y: this.pac.y });
+    if (this.pacTrail.length > 10) this.pacTrail.shift();
 
     if (this.eatPause > 0) {
       this.eatPause--;
@@ -795,6 +799,23 @@ export class Game {
       return;
     }
     const anim = this.pac.moving && this.state === 'play' ? this.pac.anim : 0;
+    if (this.view.has('boost') && this.state === 'play') {
+      // Estela: copias cada vez más tenues de dónde estuvo Pac-Man.
+      for (const [back, alpha] of [[8, 0.1], [5, 0.2], [3, 0.3]] as const) {
+        const p = this.pacTrail[this.pacTrail.length - 1 - back];
+        if (!p) continue;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawPac(ctx, p.x, MAZE_TOP + p.y, this.pac.dir, anim);
+        ctx.restore();
+      }
+      ctx.save();
+      ctx.shadowColor = '#ffe94a';
+      ctx.shadowBlur = ctx.getTransform().a * 5;
+      drawPac(ctx, this.pac.x, y, this.pac.dir, anim);
+      ctx.restore();
+      return;
+    }
     drawPac(ctx, this.pac.x, y, this.pac.dir, anim);
   }
 

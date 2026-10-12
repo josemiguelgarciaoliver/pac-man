@@ -4,7 +4,7 @@ import { Dir, TICK_RATE, opposite } from './constants';
  * Efectos de estado que alteran cómo se ve o se controla el juego. Los provocan las setas tóxicas
  * y los "fenómenos" de algunos niveles. Todos son temporales.
  */
-export type EffectKind = 'wobble' | 'invert' | 'scramble' | 'rotate' | 'mirror' | 'dark' | 'turbo';
+export type EffectKind = 'wobble' | 'invert' | 'scramble' | 'rotate' | 'mirror' | 'dark' | 'turbo' | 'boost';
 
 export const EFFECT_INFO: Record<EffectKind, { label: string; color: string }> = {
   wobble: { label: 'VISION BORROSA', color: '#c58bff' },
@@ -14,9 +14,11 @@ export const EFFECT_INFO: Record<EffectKind, { label: string; color: string }> =
   mirror: { label: 'MUNDO EN ESPEJO', color: '#7fd7ff' },
   dark: { label: 'OSCURIDAD', color: '#8a8fb5' },
   turbo: { label: 'TURBO', color: '#3fdc6a' },
+  boost: { label: 'SUPERVELOCIDAD', color: '#ffe94a' },
 };
 
-export const ALL_EFFECTS = Object.keys(EFFECT_INFO) as EffectKind[];
+/** Efectos que pueden salir de una seta o de un fenómeno (la supervelocidad es un objeto aparte). */
+export const ALL_EFFECTS: EffectKind[] = ['wobble', 'invert', 'scramble', 'rotate', 'mirror', 'dark', 'turbo'];
 
 /** Giro de 90° en sentido horario / antihorario (el orden de Dir es antihorario: arriba, izquierda, abajo, derecha). */
 const cw = (d: Dir): Dir => ((d + 3) % 4) as Dir;
@@ -120,6 +122,7 @@ export class ViewEffects {
 
   /** Multiplicador de la velocidad de Pac-Man. */
   get speedFactor(): number {
+    if (this.has('boost')) return 1.7;
     return this.has('turbo') ? 1.3 : 1;
   }
 }
