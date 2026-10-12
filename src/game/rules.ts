@@ -88,56 +88,67 @@ const FRUIT_BY_LEVEL: FruitKind[] = [
 
 export const fruitForLevel = (level: number): FruitKind => FRUIT_BY_LEVEL[level - 1] ?? 'key';
 
-/** [segundos asustados, parpadeos] por nivel del 1 al 18. */
-const FRIGHT: [number, number][] = [
-  [6, 5], [5, 5], [4, 5], [3, 5], [2, 5], [5, 5], [2, 5], [2, 5], [1, 3],
-  [5, 5], [2, 5], [1, 3], [1, 3], [3, 5], [1, 3], [1, 3], [0, 0], [1, 3],
-];
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
-/** [puntos restantes para Elroy 1] por nivel (Elroy 2 = la mitad). */
-const ELROY: number[] = [20, 30, 40, 40, 40, 50, 50, 50, 60, 60, 60, 80, 80, 80, 100, 100, 100, 100];
+/**
+ * Reglas de dificultad de un nivel.
+ *  - `level`: nivel equivalente del arcade (indexa fruta y salida de la casa).
+ *  - `difficulty`: preset del jugador. Su ayuda se va desvaneciendo con el avance del juego.
+ *  - `global`: nivel global 1–100. La dificultad crece SIN bajar nunca hasta el 100, donde los fantasmas
+ *    corren mucho más que Pac-Man, no hay dispersión ni estado asustado: es prácticamente imposible.
+ */
+export function getLevelRules(level: number, difficulty: Difficulty = 'arcade', global: number = level): LevelRules {
+  const p = clamp01((global - 1) / 99);
+  const ramp = clamp01(p / 0.3); // tarda hasta el nivel ~31 en llegar a los valores de velocidad del arcade
+  const fade = p ** 1.4; // cuánto se ha desvanecido la ayuda del preset (0 al principio, 1 en el nivel 100)
 
-export function getLevelRules(level: number, difficulty: Difficulty = 'arcade'): LevelRules {
-  const tier = level === 1 ? 0 : level <= 4 ? 1 : level <= 20 ? 2 : 3;
-  const [fright, flashes] = FRIGHT[level - 1] ?? [0, 0];
-  const elroy1 = ELROY[level - 1] ?? 120;
-
-  const pacSpeed = [0.8, 0.9, 1, 0.9][tier];
-  const pacFrightSpeed = [0.9, 0.95, 1, 0.9][tier];
-  const ghostSpeed = [0.75, 0.85, 0.95, 0.95][tier];
-  const ghostTunnelSpeed = [0.4, 0.45, 0.5, 0.5][tier];
-  const ghostFrightSpeed = [0.5, 0.55, 0.6, 0.6][tier];
-  const elroySpeeds = [
-    [0.8, 0.85],
-    [0.9, 0.95],
-    [1, 1.05],
-    [1, 1.05],
-  ][tier];
-
-  const schedule =
-    level === 1
-      ? [s(7), s(20), s(7), s(20), s(5), s(20), s(5), Infinity]
-      : level <= 4
-        ? [s(7), s(20), s(7), s(20), s(5), s(1033), 1, Infinity]
-        : [s(5), s(20), s(5), s(20), s(5), s(1037), 1, Infinity];
+  // Velocidades base (fracción del 100 %): suben juntas; luego Pac-Man pierde algo y los fantasmas se disparan.
+  const pacBase = (0.8 + 0.2 * ramp) * (1 - 0.1 * p ** 2);
+  const ghostBase = (0.75 + 0.2 * ramp) * (1 + 0.38 * p ** 2.2);
+  const ghostTunnelBase = 0.4 + 0.1 * ramp;
+  const ghostFrightBase = 0.5 + 0.1 * ramp;
 
   const d = DIFFICULTY_PRESETS[difficulty];
-  // Alterna scatter (índices pares) y chase (impares); la última fase infinita se queda como está.
-  const scaledSchedule = schedule.map((t, i) => (Number.isFinite(t) ? Math.max(1, Math.round(t * (i % 2 === 0 ? d.scatter : d.chase))) : t));
+  const gMul = d.ghostSpeed + (1 - d.ghostSpeed) * fade;
+  const pMul = d.pacSpeed + (1 - d.pacSpeed) * fade;
+  const ghostSpeed = ghostBase * gMul;
+  const pacSpeed = Math.min(1.2, pacBase * pMul);
+
+  // Estado asustado: de 6 s a ninguno en el último nivel.
+  const frightSeconds = 6 * (1 - p) ** 1.35;
+  const frightMul = d.fright + (1 - d.fright) * fade;
+  const frightMin = d.frightMin * (1 - p) ** 2;
+  const frightTicks = p >= 0.995 ? 0 : Math.max(Math.round(s(frightSeconds) * frightMul), Math.round(frightMin));
+
+  // Dispersión (respiro) y persecución: la dispersión se encoge hasta casi desaparecer.
+  const base = global === 1 ? [7, 20, 7, 20, 5, 20, 5] : global <= 15 ? [7, 20, 7, 20, 5, 1033, 0] : [5, 20, 5, 20, 5, 1037, 0];
+  const scatterScale = (d.scatter + (1 - d.scatter) * fade) * (1 - 0.8 * p ** 1.3);
+  const chaseScale = d.chase + (1 - d.chase) * fade;
+  const schedule = [
+    ...base.map((seconds, i) => {
+      if (seconds === 0) return 1; // el último "respiro" es de un solo tick
+      return Math.max(i % 2 === 0 ? s(1) : s(2), Math.round(s(seconds) * (i % 2 === 0 ? scatterScale : chaseScale)));
+    }),
+    Infinity,
+  ];
+
+  // Cruise Elroy de Blinky: los presets sin él lo van recuperando poco a poco.
+  const elroy1 = Math.round(20 + 100 * p);
+  const elroyShare = d.elroy ? 1 : p;
 
   return {
-    pacSpeed: Math.min(pacSpeed * d.pacSpeed, 1.2),
-    pacFrightSpeed: Math.min(pacFrightSpeed * d.pacSpeed, 1.2),
-    ghostSpeed: ghostSpeed * d.ghostSpeed,
-    ghostTunnelSpeed: ghostTunnelSpeed * d.ghostSpeed,
-    ghostFrightSpeed: ghostFrightSpeed * d.ghostSpeed,
-    elroy1Dots: d.elroy ? elroy1 : 0,
-    elroy1Speed: elroySpeeds[0],
-    elroy2Dots: d.elroy ? Math.floor(elroy1 / 2) : 0,
-    elroy2Speed: elroySpeeds[1],
-    frightTicks: Math.max(Math.round(s(fright) * d.fright), d.frightMin),
-    flashes,
-    schedule: scaledSchedule,
+    pacSpeed,
+    pacFrightSpeed: Math.min(1.2, pacSpeed + 0.1),
+    ghostSpeed,
+    ghostTunnelSpeed: ghostTunnelBase * gMul,
+    ghostFrightSpeed: ghostFrightBase * gMul,
+    elroy1Dots: Math.round(elroy1 * elroyShare),
+    elroy1Speed: ghostSpeed * 1.07,
+    elroy2Dots: Math.round((elroy1 / 2) * elroyShare),
+    elroy2Speed: ghostSpeed * 1.13,
+    frightTicks,
+    flashes: frightTicks === 0 ? 0 : frightSeconds >= 3 ? 5 : 3,
+    schedule,
     fruit: fruitForLevel(level),
     houseLimits: level === 1 ? { pinky: 0, inky: 30, clyde: 60 } : level === 2 ? { pinky: 0, inky: 0, clyde: 50 } : { pinky: 0, inky: 0, clyde: 0 },
     idleReleaseTicks: s(level < 5 ? 4 : 3),

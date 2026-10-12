@@ -17,7 +17,7 @@ const MID = 13; // última columna de la mitad izquierda
 const CENTER_BAND = ORIGINAL_MAZE.slice(9, 20);
 
 /** Casillas que deben quedar abiertas para enlazar con la banda central y con la salida de Pac-Man. */
-const REQUIRED_OPEN: [number, number][] = [
+export const REQUIRED_OPEN: [number, number][] = [
   [6, 8], [12, 8], [15, 8], [21, 8],
   [6, 20], [9, 20], [18, 20], [21, 20],
   [12, 23], [13, 23], [14, 23], [15, 23],

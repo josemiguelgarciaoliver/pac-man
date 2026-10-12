@@ -4,10 +4,10 @@ import { levelPhrase } from '../src/data/family';
 import { ORIGINAL_MAZE } from '../src/data/mazes/original';
 import { Dir } from '../src/game/constants';
 import { arcadeEquivalent } from '../src/game/level/curve';
-import { buildLevel, WORLD_WALL_COLORS } from '../src/game/level/levels';
+import { buildLevel, isSpecialLevel, validateLevelMaze, WORLD_WALL_COLORS } from '../src/game/level/levels';
 import { bfs, beltRuns, nearestTile, shortestPath } from '../src/game/level/placement';
 import { levelSchema } from '../src/game/level/schema';
-import { generateMaze, mazeDistance, mazeHash, qualityErrors, validateMaze } from '../src/game/maze/generator';
+import { generateMaze, mazeDistance, mazeHash, qualityErrors } from '../src/game/maze/generator';
 import { Maze } from '../src/game/maze/maze';
 import { ConveyorMechanic } from '../src/game/mechanics/conveyor';
 import { drift } from '../src/game/mechanics/drift';
@@ -27,7 +27,7 @@ describe('los 100 niveles', () => {
   });
 
   it('todos los laberintos son válidos', () => {
-    for (const def of levels) expect(validateMaze(def.maze), `nivel ${def.level}`).toEqual([]);
+    for (const def of levels) expect(validateLevelMaze(def.level, def.maze), `nivel ${def.level}`).toEqual([]);
   });
 
   it('ningún laberinto se repite y todos difieren bastante', () => {
@@ -43,7 +43,7 @@ describe('los 100 niveles', () => {
   });
 
   it('los laberintos generados tienen el aspecto del arcade (sin macizos de pared)', () => {
-    for (const def of levels.slice(1)) expect(qualityErrors(def.maze), `nivel ${def.level}`).toEqual([]);
+    for (const def of levels.slice(1).filter((d) => !isSpecialLevel(d.level))) expect(qualityErrors(def.maze), `nivel ${def.level}`).toEqual([]);
   });
 });
 
@@ -57,14 +57,9 @@ describe('curva de dificultad', () => {
     }
   });
 
-  it('cada mundo arranca más alto que el anterior, con un respiro respecto a su final', () => {
-    for (let world = 2; world <= 10; world++) {
-      const first = arcadeEquivalent((world - 1) * 10 + 1);
-      const prevFirst = arcadeEquivalent((world - 2) * 10 + 1);
-      const prevLast = arcadeEquivalent((world - 1) * 10);
-      expect(first).toBeGreaterThan(prevFirst);
-      expect(first).toBeLessThan(prevLast); // el "respiro" del diente de sierra
-    }
+  it('no baja nunca: la dificultad es progresiva del 1 al 100', () => {
+    for (let n = 2; n <= 100; n++) expect(arcadeEquivalent(n), `nivel ${n}`).toBeGreaterThanOrEqual(arcadeEquivalent(n - 1));
+    expect(arcadeEquivalent(1)).toBe(1);
   });
 
   it('el último nivel es claramente más difícil que el primero', () => {
@@ -141,7 +136,7 @@ describe('mecánicas', () => {
   });
 
   it('hay tramos rectos de sobra en los laberintos generados', () => {
-    for (const def of levels.slice(1)) expect(beltRuns(def.maze).length, `nivel ${def.level}`).toBeGreaterThanOrEqual(3);
+    for (const def of levels.slice(1).filter((d) => !isSpecialLevel(d.level))) expect(beltRuns(def.maze).length, `nivel ${def.level}`).toBeGreaterThanOrEqual(3);
   });
 
   it('una cinta empuja a Pac-Man pero no a través de las paredes', () => {
@@ -190,5 +185,28 @@ describe('generador', () => {
   it('es determinista', () => {
     expect(generateMaze(7)).toEqual(generateMaze(7));
     expect(mazeHash(generateMaze(7))).not.toBe(mazeHash(generateMaze(8)));
+  });
+});
+
+describe('niveles raros', () => {
+  const specialLevels = levels.filter((l) => isSpecialLevel(l.level));
+
+  it('hay varios y cada uno lleva título', () => {
+    expect(specialLevels.length).toBeGreaterThanOrEqual(8);
+    for (const l of specialLevels) expect(l.subtitle, `nivel ${l.level}`).toBeTruthy();
+  });
+
+  it('la sala sin paredes no tiene ninguna pared interior', () => {
+    const arena = buildLevel(9);
+    // Zonas libres (filas 1–8 y 20–29): solo el borde es pared.
+    for (const r of [...Array(8).keys()].map((i) => i + 1).concat([...Array(10).keys()].map((i) => i + 20))) {
+      expect(arena.maze[r].slice(1, 27), `fila ${r}`).not.toContain('#');
+    }
+  });
+
+  it('son distintos entre sí y siguen siendo jugables', () => {
+    const hashes = new Set(specialLevels.map((l) => l.maze.join('|')));
+    expect(hashes.size).toBe(specialLevels.length);
+    for (const l of specialLevels) expect(validateLevelMaze(l.level, l.maze), `nivel ${l.level}`).toEqual([]);
   });
 });

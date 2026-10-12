@@ -123,6 +123,8 @@ export const levelSchema = z.object({
   name: z.string().min(1),
   /** Nivel equivalente del arcade que indexa las tablas de velocidad y tiempos. */
   arcadeLevel: z.number().int().min(1).max(40),
+  /** Distribución especial ("Sala sin paredes"…); se muestra en la tarjeta de inicio. */
+  subtitle: z.string().optional(),
   maze: z.array(z.string().length(28)).length(31),
   wallColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   mission: missionSchema,

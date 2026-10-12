@@ -305,7 +305,7 @@ export class Game {
     this.levelDef = def;
     this.view.clear();
     this.syncWalls();
-    this.rules = getLevelRules(def.arcadeLevel, this.difficulty);
+    this.rules = getLevelRules(def.arcadeLevel, this.difficulty, def.level);
     this.mission = new Mission(def.mission, def.maze, createRng(def.level * 7919));
     this.mechanics = createMechanics(def.mechanics, def.maze, createRng(def.level * 104729 + 1));
     this.helpers.reset();
@@ -895,7 +895,7 @@ export class Game {
     const x = 10;
     const y = 60;
     const w = SCREEN_W - 20;
-    const h = 132;
+    const h = 136;
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.shadowColor = def.wallColor;
@@ -911,13 +911,14 @@ export class Game {
     const cx = SCREEN_W / 2;
     drawTextCentered(ctx, `MUNDO ${def.world}`, cx, y + 9, def.wallColor);
     drawTextCentered(ctx, def.name.toUpperCase(), cx, y + 21, COLORS.text);
-    drawTextCentered(ctx, `NIVEL ${def.stage}`, cx, y + 36, COLORS.ready);
+    drawTextCentered(ctx, `NIVEL ${def.stage}`, cx, y + 34, COLORS.ready);
+    if (def.subtitle) drawTextCentered(ctx, def.subtitle, cx, y + 46, '#ff9ae8');
     const special = def.mission.type !== 'CLEAR';
-    drawTextCentered(ctx, g1, cx, y + 55, special ? '#ffee22' : '#cfd8ff');
-    if (g2) drawTextCentered(ctx, g2, cx, y + 66, special ? '#ffee22' : '#cfd8ff');
-    drawTextCentered(ctx, `${who.name}:`, cx, y + 88, who.color);
-    drawTextCentered(ctx, phrase.lines[0], cx, y + 100, COLORS.text);
-    drawTextCentered(ctx, phrase.lines[1], cx, y + 112, COLORS.text);
+    drawTextCentered(ctx, g1, cx, y + 61, special ? '#ffee22' : '#cfd8ff');
+    if (g2) drawTextCentered(ctx, g2, cx, y + 72, special ? '#ffee22' : '#cfd8ff');
+    drawTextCentered(ctx, `${who.name}:`, cx, y + 93, who.color);
+    drawTextCentered(ctx, phrase.lines[0], cx, y + 105, COLORS.text);
+    drawTextCentered(ctx, phrase.lines[1], cx, y + 117, COLORS.text);
     ctx.restore();
   }
 
