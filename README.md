@@ -21,12 +21,12 @@ Abre `/?autostart` para saltarte la pantalla de título.
 
 | Entrada | Acción |
 |---|---|
-| Teclado | Flechas / WASD, `P` o `Esc` pausa |
-| Táctil | Swipe en cualquier parte de la pantalla |
+| Teclado | Flechas / WASD, `P` o `Esc` pausa, `M` silencio |
+| Táctil | Cruceta virtual o swipe (se cambia con el botón de la barra); botones de pausa, sonido y pantalla completa |
 | Gamepad | D-pad o stick izquierdo, `Start` pausa |
 
 ## Estado
 
-Fases 0 y 1 hechas; Fase 2 casi completa: laberinto original, Pac-Man, los 4 fantasmas con la IA del arcade
-(modos, casa, Cruise Elroy), frutas, vidas y muerte. Los sonidos originales están en `public/assets/audio/`
-(aún sin conectar al juego: Fase 3). Faltan las intermissions y el resto de mundos.
+Fases 0–4 hechas (Fase 4 pendiente de pruebas en dispositivos reales): motor, laberinto original, fantasmas con la IA del arcade,
+sonido, gráficos vectoriales, controles táctiles/teclado/gamepad y PWA instalable offline.
+Siguiente: sistema de niveles y mundos (Fase 5). Abre `/?touch` en escritorio para ver el diseño táctil.

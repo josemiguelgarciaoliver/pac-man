@@ -108,6 +108,8 @@ export class Game {
     this.input.poll();
     const pressed = this.input.consumePress();
     if (this.input.consumeMute()) this.audio.toggleMute();
+    // Se consume siempre: una pausa pedida en pantalla de título no debe quedar pendiente.
+    const pauseRequested = this.input.consumePause();
 
     switch (this.state) {
       case 'title':
@@ -118,10 +120,8 @@ export class Game {
         if (--this.timer <= 0) this.state = 'play';
         break;
       case 'play':
-        if (this.input.consumePause()) {
-          this.resumeState = 'play';
-          this.state = 'paused';
-          this.audio.suspend();
+        if (pauseRequested) {
+          this.pause();
           break;
         }
         this.updatePlay();
@@ -140,12 +140,23 @@ export class Game {
         if (--this.timer <= 0) this.state = 'title';
         break;
       case 'paused':
-        if (this.input.consumePause()) {
+        if (pauseRequested) {
           this.state = this.resumeState;
           this.audio.resume();
         }
         break;
     }
+  }
+
+  /** Pausa automática al perder el foco (no hace nada si no se está jugando). */
+  pauseIfPlaying(): void {
+    if (this.state === 'play') this.pause();
+  }
+
+  private pause(): void {
+    this.resumeState = 'play';
+    this.state = 'paused';
+    this.audio.suspend();
   }
 
   private startGame(): void {

@@ -52,3 +52,17 @@ describe('PacMan', () => {
     expect(pac.x).toBeGreaterThan(200);
   });
 });
+
+describe('cruceta virtual', () => {
+  it('traduce el desplazamiento del dedo en una dirección', async () => {
+    const { directionFromOffset } = await import('../src/input/input');
+    expect(directionFromOffset(30, 5, 6)).toBe(Dir.Right);
+    expect(directionFromOffset(-30, 5, 6)).toBe(Dir.Left);
+    expect(directionFromOffset(4, -30, 6)).toBe(Dir.Up);
+    expect(directionFromOffset(4, 30, 6)).toBe(Dir.Down);
+  });
+  it('ignora la zona muerta del centro', async () => {
+    const { directionFromOffset } = await import('../src/input/input');
+    expect(directionFromOffset(2, 2, 6)).toBeNull();
+  });
+});

@@ -11,6 +11,12 @@ const KEY_MAP: Record<string, Dir> = {
   KeyD: Dir.Right,
 };
 
+/** Dirección dominante de un desplazamiento (d-pad virtual); null dentro de la zona muerta. */
+export function directionFromOffset(dx: number, dy: number, dead: number): Dir | null {
+  if (Math.hypot(dx, dy) < dead) return null;
+  return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? Dir.Right : Dir.Left) : dy > 0 ? Dir.Down : Dir.Up;
+}
+
 /** Distancia mínima (px de pantalla) para considerar un gesto como swipe. */
 const SWIPE_MIN = 18;
 
@@ -86,6 +92,20 @@ export class Input {
   }
 
   /** ¿Se pulsó algo desde la última consulta? (para pantallas de título) */
+  /** Acciones desde botones en pantalla. */
+  requestDirection(dir: Dir): void {
+    this.direction = dir;
+    this.pressed = true;
+  }
+
+  requestPause(): void {
+    this.pauseRequested = true;
+  }
+
+  requestMute(): void {
+    this.muteRequested = true;
+  }
+
   consumePress(): boolean {
     const p = this.pressed;
     this.pressed = false;

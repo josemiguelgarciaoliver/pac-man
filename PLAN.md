@@ -403,12 +403,12 @@ Cada fase acaba en un hito jugable y desplegado en GitHub Pages.
 - **Hito:** experiencia audiovisual idéntica al arcade.
 
 ### Fase 4 — Multiplataforma y PWA
-- [ ] Controles táctiles: swipe + d-pad virtual configurable y háptica.
-- [ ] Gamepad API: mapping, zona muerta y hot-plug.
-- [ ] Layouts para móvil en vertical/horizontal, tablet y escritorio (bezel opcional y filtro CRT).
-- [ ] Pantalla completa, Wake Lock, orientación y *safe areas*.
-- [ ] PWA: manifest, iconos, *service worker* y juego offline.
-- [ ] Pruebas en dispositivos reales: iOS Safari, Android Chrome y escritorio.
+- [x] Controles táctiles: swipe + cruceta virtual (arrastrable) conmutables, botones de pausa/sonido/pantalla completa y vibración.
+- [x] Gamepad API: d-pad, stick izquierdo (zona muerta) y botones A/Start; detección automática (pendiente: remapeo).
+- [x] Layouts: móvil vertical (barra inferior), horizontal/tablet (controles sobre los márgenes) y escritorio (botones discretos). Pendiente: bezel opcional y filtro CRT.
+- [x] Pantalla completa, Wake Lock, pausa automática al perder el foco y *safe areas*. (Bloqueo de orientación descartado: el juego se adapta a ambas.)
+- [x] PWA: manifest, iconos, service worker propio (sin dependencias) y juego offline.
+- [ ] Pruebas en dispositivos reales: iOS Safari, Android Chrome y escritorio (verificado solo en Chrome de escritorio con emulación de diseño táctil; falta probar en móviles reales).
 - **Hito:** el juego se instala y se juega bien en móvil, tablet y PC.
 
 ### Fase 5 — Sistema de niveles y herramientas
