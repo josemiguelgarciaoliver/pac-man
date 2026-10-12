@@ -26,7 +26,7 @@ type FullscreenEl = HTMLElement & { webkitRequestFullscreen?: () => void };
  * Controles en pantalla: cruceta virtual, pausa, sonido, modo de control y pantalla completa.
  * Solo habla con `Input` y `AudioManager`; el juego no sabe que existen.
  */
-export function setupControls(input: Input, audio: AudioManager): { update(): void } {
+export function setupControls(input: Input, audio: AudioManager): { update(helpers: { aina: boolean; aleix: boolean }): void } {
   const app = document.getElementById('app')!;
   const dpad = document.getElementById('dpad')!;
   const controls = document.getElementById('controls')!;
@@ -37,6 +37,10 @@ export function setupControls(input: Input, audio: AudioManager): { update(): vo
 
   const touch = isTouch();
   app.classList.toggle('touch', touch);
+  // En ventanas estrechas (más altas que anchas) los botones van en una barra inferior para no tapar el HUD.
+  const updateBar = () => app.classList.toggle('bar', touch || window.innerWidth / window.innerHeight < 0.9);
+  updateBar();
+  window.addEventListener('resize', updateBar);
 
   // Los botones no deben contar como "pulsar para empezar" ni lanzar gestos de swipe.
   controls.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -101,6 +105,12 @@ export function setupControls(input: Input, audio: AudioManager): { update(): vo
   dpad.addEventListener('pointerup', release);
   dpad.addEventListener('pointercancel', release);
 
+  // ── Habilidades de los hijos ──
+  const btnAina = document.getElementById('btn-aina')!;
+  const btnAleix = document.getElementById('btn-aleix')!;
+  btnAina.addEventListener('click', () => input.requestAina());
+  btnAleix.addEventListener('click', () => input.requestAleix());
+
   // ── Pausa y sonido ──
   btnPause.addEventListener('click', () => input.requestPause());
   btnMute.addEventListener('click', () => input.requestMute());
@@ -124,7 +134,9 @@ export function setupControls(input: Input, audio: AudioManager): { update(): vo
   let lastFull: boolean | null = null;
   btnPause.innerHTML = ICONS.pause;
   return {
-    update() {
+    update(helpers) {
+      btnAina.classList.toggle('used', !helpers.aina);
+      btnAleix.classList.toggle('used', !helpers.aleix);
       if (lastMuted !== audio.muted) {
         lastMuted = audio.muted;
         btnMute.innerHTML = audio.muted ? ICONS.muted : ICONS.sound;

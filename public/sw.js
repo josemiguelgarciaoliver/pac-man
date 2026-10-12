@@ -1,6 +1,6 @@
 // Service worker: deja el juego instalable y jugable sin conexión.
 // Cambia VERSION para forzar que los clientes descarguen todo de nuevo.
-const VERSION = 'pacman-v1';
+const VERSION = 'pacman-v2';
 
 const CORE = [
   './',

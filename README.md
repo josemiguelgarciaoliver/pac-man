@@ -21,12 +21,15 @@ Abre `/?autostart` para saltarte la pantalla de título.
 
 | Entrada | Acción |
 |---|---|
-| Teclado | Flechas / WASD, `P` o `Esc` pausa, `M` silencio |
+| Teclado | Flechas / WASD, `P` o `Esc` pausa, `M` silencio, `Z` Pista de Aina, `X` Señuelo de Aleix |
 | Táctil | Cruceta virtual o swipe (se cambia con el botón de la barra); botones de pausa, sonido y pantalla completa |
 | Gamepad | D-pad o stick izquierdo, `Start` pausa |
 
 ## Estado
 
-Fases 0–4 hechas (Fase 4 pendiente de pruebas en dispositivos reales): motor, laberinto original, fantasmas con la IA del arcade,
-sonido, gráficos vectoriales, controles táctiles/teclado/gamepad y PWA instalable offline.
-Siguiente: sistema de niveles y mundos (Fase 5). Abre `/?touch` en escritorio para ver el diseño táctil.
+Fases 0–5 casi completas: motor, fantasmas con la IA del arcade, sonido, gráficos vectoriales, controles táctiles/teclado/gamepad,
+PWA offline, 100 niveles en 10 mundos (laberintos únicos generados y validados), misiones, cintas transportadoras y la
+temática familiar (Cely, Aina y Aleix). Pendientes: editor de laberintos, jefes, y las mecánicas propias de cada mundo (Fases 7–9).
+
+Parámetros útiles: `/?autostart&level=28` empieza en un nivel concreto; `/?touch` fuerza el diseño táctil.
+Regenerar los laberintos: `npm run generate:mazes`.

@@ -31,14 +31,23 @@
       .btn svg { width: 22px; height: 22px; fill: currentColor; }
       .btn[hidden] { display: none; }
 
+      /* Habilidades de los hijos: Aina (pista) y Aleix (señuelo) */
+      #helpers { display: none; gap: 12px; align-items: center; }
+      .touch #helpers { display: flex; }
+      .touch.dpad-on #helpers, .touch:not(.dpad-on) #helpers { flex-direction: column; }
+      .helper { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--c); background: rgba(10, 12, 40, .6); color: var(--c);
+        font: 800 11px/1.1 system-ui, sans-serif; letter-spacing: .04em; cursor: pointer; padding: 0; box-shadow: 0 0 10px color-mix(in srgb, var(--c) 45%, transparent); }
+      .helper:active { background: color-mix(in srgb, var(--c) 35%, transparent); }
+      .helper.used { opacity: .35; box-shadow: none; filter: grayscale(.8); }
+
       /* Escritorio: botones flotantes discretos */
-      #app:not(.touch) #controls { display: block; position: absolute; top: 8px; right: 8px; opacity: .4; transition: opacity .2s; }
-      #app:not(.touch) #controls:hover { opacity: 1; }
+      #app:not(.bar) #controls { display: block; position: absolute; top: 8px; right: 8px; opacity: .4; transition: opacity .2s; }
+      #app:not(.bar) #controls:hover { opacity: 1; }
       #app:not(.touch) #dpad { display: none; }
 
       /* Táctil, vertical: barra inferior */
-      .touch #controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 0 0 auto; padding: 8px 16px 10px; box-sizing: border-box; }
-      .touch:not(.dpad-on) #controls { justify-content: center; }
+      .bar #controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 0 0 auto; padding: 8px 16px 10px; box-sizing: border-box; }
+      .bar:not(.dpad-on) #controls { justify-content: center; }
       .touch.dpad-on #controls { height: clamp(160px, 31vh, 240px); }
       .touch.dpad-on #buttons { flex-direction: column; }
       #dpad { display: none; height: 100%; aspect-ratio: 1; position: relative; touch-action: none; }
@@ -70,6 +79,10 @@
             <path class="arrow" data-dir="left" d="M22 100 L62 68 L62 132 Z" />
             <path class="arrow" data-dir="right" d="M178 100 L138 68 L138 132 Z" />
           </svg>
+        </div>
+        <div id="helpers">
+          <button class="helper" id="btn-aina" style="--c:#7fd7ff" aria-label="Aina: pista">AINA<br />PISTA</button>
+          <button class="helper" id="btn-aleix" style="--c:#ffb347" aria-label="Aleix: señuelo">ALEIX<br />SEÑUELO</button>
         </div>
         <div id="buttons">
           <button class="btn" id="btn-pause" aria-label="Pausa" title="Pausa (P)"></button>

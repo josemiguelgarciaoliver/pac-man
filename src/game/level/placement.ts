@@ -1,0 +1,171 @@
+import { MAZE_COLS, MAZE_ROWS } from '../constants';
+import { PAC_SPAWN_TILE, reachableTiles } from '../maze/generator';
+import type { Rng } from '../random';
+
+export interface TileXY {
+  col: number;
+  row: number;
+}
+
+const DELTAS: [number, number][] = [
+  [0, -1],
+  [-1, 0],
+  [0, 1],
+  [1, 0],
+];
+
+const key = (c: number, r: number) => r * MAZE_COLS + c;
+
+function isTunnel(lines: readonly string[], row: number): boolean {
+  return lines[row][0] !== '#' && lines[row][MAZE_COLS - 1] !== '#';
+}
+
+/** Vecinos transitables de una casilla (ni paredes ni puerta); el túnel da la vuelta. */
+export function neighbors(lines: readonly string[], col: number, row: number): TileXY[] {
+  const out: TileXY[] = [];
+  for (const [dc, dr] of DELTAS) {
+    let c = col + dc;
+    const r = row + dr;
+    if (r < 0 || r >= MAZE_ROWS) continue;
+    if (c < 0 || c >= MAZE_COLS) {
+      if (!isTunnel(lines, r)) continue;
+      c = (c + MAZE_COLS) % MAZE_COLS;
+    }
+    const ch = lines[r][c];
+    if (ch === '#' || ch === '-') continue;
+    out.push({ col: c, row: r });
+  }
+  return out;
+}
+
+/** BFS desde `from`: distancia en casillas (−1 = inalcanzable) y casilla de la que se llegó. */
+export function bfs(lines: readonly string[], from: TileXY): { dist: Int16Array; parent: Int32Array } {
+  const dist = new Int16Array(MAZE_COLS * MAZE_ROWS).fill(-1);
+  const parent = new Int32Array(MAZE_COLS * MAZE_ROWS).fill(-1);
+  const queue: TileXY[] = [from];
+  dist[key(from.col, from.row)] = 0;
+  for (let i = 0; i < queue.length; i++) {
+    const cur = queue[i];
+    for (const n of neighbors(lines, cur.col, cur.row)) {
+      const k = key(n.col, n.row);
+      if (dist[k] !== -1) continue;
+      dist[k] = dist[key(cur.col, cur.row)] + 1;
+      parent[k] = key(cur.col, cur.row);
+      queue.push(n);
+    }
+  }
+  return { dist, parent };
+}
+
+/** Camino más corto (incluye origen y destino) o null si no hay. */
+export function shortestPath(lines: readonly string[], from: TileXY, to: TileXY): TileXY[] | null {
+  const { dist, parent } = bfs(lines, from);
+  let k = key(to.col, to.row);
+  if (dist[k] === -1) return null;
+  const path: TileXY[] = [];
+  while (k !== -1) {
+    path.push({ col: k % MAZE_COLS, row: Math.floor(k / MAZE_COLS) });
+    k = parent[k];
+  }
+  return path.reverse();
+}
+
+/** Casilla más cercana a `from` que cumpla `pred` (null si ninguna). */
+export function nearestTile(lines: readonly string[], from: TileXY, pred: (t: TileXY) => boolean): TileXY | null {
+  const { dist } = bfs(lines, from);
+  let best: TileXY | null = null;
+  let bestDist = Infinity;
+  for (let k = 0; k < dist.length; k++) {
+    if (dist[k] <= 0 || dist[k] >= bestDist) continue;
+    const t = { col: k % MAZE_COLS, row: Math.floor(k / MAZE_COLS) };
+    if (pred(t)) {
+      best = t;
+      bestDist = dist[k];
+    }
+  }
+  return best;
+}
+
+/** Casillas con punto normal alcanzables (donde se pueden colocar objetos sin estorbar). */
+export function dotTiles(lines: readonly string[]): TileXY[] {
+  const reach = reachableTiles(lines);
+  const out: TileXY[] = [];
+  for (let r = 0; r < MAZE_ROWS; r++) for (let c = 0; c < MAZE_COLS; c++) if (lines[r][c] === '.' && reach.has(key(c, r))) out.push({ col: c, row: r });
+  return out;
+}
+
+/**
+ * Reparte `count` casillas lo más lejos posible unas de otras y de la salida de Pac-Man
+ * (muestreo del punto más lejano; entre los mejores candidatos elige uno al azar).
+ */
+export function pickSpread(lines: readonly string[], count: number, rng: Rng): TileXY[] {
+  const candidates = dotTiles(lines);
+  const minDist = new Map<number, number>();
+  const spawnDist = bfs(lines, PAC_SPAWN_TILE).dist;
+  for (const t of candidates) minDist.set(key(t.col, t.row), spawnDist[key(t.col, t.row)]);
+
+  const chosen: TileXY[] = [];
+  for (let i = 0; i < count; i++) {
+    let max = -1;
+    for (const d of minDist.values()) max = Math.max(max, d);
+    const top = candidates.filter((t) => (minDist.get(key(t.col, t.row)) ?? -1) >= max * 0.85 && !chosen.includes(t));
+    const pick = top[rng.int(top.length)];
+    chosen.push(pick);
+    const d = bfs(lines, pick).dist;
+    for (const t of candidates) {
+      const k = key(t.col, t.row);
+      minDist.set(k, Math.min(minDist.get(k) ?? Infinity, d[k]));
+    }
+  }
+  return chosen;
+}
+
+/** Casilla con punto más lejana de la salida de Pac-Man. */
+export function farthestFromSpawn(lines: readonly string[]): TileXY {
+  const { dist } = bfs(lines, PAC_SPAWN_TILE);
+  let best = -1;
+  for (let k = 0; k < dist.length; k++) {
+    if (lines[Math.floor(k / MAZE_COLS)][k % MAZE_COLS] !== '.') continue;
+    if (best === -1 || dist[k] > dist[best]) best = k;
+  }
+  return { col: best % MAZE_COLS, row: Math.floor(best / MAZE_COLS) };
+}
+
+export interface BeltRun {
+  tiles: TileXY[];
+  horizontal: boolean;
+}
+
+/**
+ * Tramos rectos de pasillo (con pared a ambos lados) de al menos 4 casillas, fuera de la banda
+ * central y de la salida de Pac-Man: sitios donde una cinta no estorba a los cruces.
+ */
+export function beltRuns(lines: readonly string[]): BeltRun[] {
+  const reach = reachableTiles(lines);
+  const open = (c: number, r: number) => reach.has(key(c, r)) && lines[r][c] !== ' ';
+  const wall = (c: number, r: number) => r < 0 || r >= MAZE_ROWS || c < 0 || c >= MAZE_COLS || lines[r][c] === '#';
+  const usable = (c: number, r: number) => r >= 1 && r <= 29 && (r < 9 || r > 19) && !(r === 23 && c >= 10 && c <= 17) && open(c, r);
+
+  const runs: BeltRun[] = [];
+  const collect = (horizontal: boolean) => {
+    const outer = horizontal ? MAZE_ROWS : MAZE_COLS;
+    const inner = horizontal ? MAZE_COLS : MAZE_ROWS;
+    for (let a = 0; a < outer; a++) {
+      let run: TileXY[] = [];
+      const flush = () => {
+        if (run.length >= 4) runs.push({ tiles: run, horizontal });
+        run = [];
+      };
+      for (let b = 0; b < inner; b++) {
+        const [c, r] = horizontal ? [b, a] : [a, b];
+        const straight = horizontal ? wall(c, r - 1) && wall(c, r + 1) : wall(c - 1, r) && wall(c + 1, r);
+        if (usable(c, r) && straight) run.push({ col: c, row: r });
+        else flush();
+      }
+      flush();
+    }
+  };
+  collect(true);
+  collect(false);
+  return runs;
+}

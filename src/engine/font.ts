@@ -2,9 +2,9 @@
  * Texto del HUD. Mantiene la cuadrícula de 8 px del arcade (cada carácter ocupa una celda),
  * pero con tipografía suave en lugar de píxeles.
  */
-export const CHAR_W = 8;
+export const CHAR_W = 6.6;
 
-const FONT = "800 7.6px 'Arial Rounded MT Bold', 'Trebuchet MS', 'Segoe UI', Verdana, sans-serif";
+const FONT = "800 8.2px 'Arial Rounded MT Bold', 'Trebuchet MS', 'Segoe UI', Verdana, sans-serif";
 
 export function drawText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, color: string): void {
   ctx.save();

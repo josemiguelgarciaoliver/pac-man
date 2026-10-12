@@ -49,6 +49,11 @@ export class Maze {
     this.totalPellets = this.pellets.size;
   }
 
+  /** Devuelve los energizers al laberinto (misiones de caza). */
+  respawnEnergizers(): void {
+    for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) if (this.cells[r][c] === 'o' && !this.pellets.has(this.key(c, r))) this.pellets.set(this.key(c, r), 'energizer');
+  }
+
   get pelletsLeft(): number {
     return this.pellets.size;
   }

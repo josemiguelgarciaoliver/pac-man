@@ -30,6 +30,9 @@ export class Input {
   private pressed = false;
   private pauseRequested = false;
   private muteRequested = false;
+  private ainaRequested = false;
+  private aleixRequested = false;
+  private padHelperDown = [false, false];
   private touchStart: { id: number; x: number; y: number } | null = null;
   private padWasDown = false;
   private padStartWasDown = false;
@@ -43,6 +46,8 @@ export class Input {
       if (e.code === 'Enter' || e.code === 'Space') this.pressed = true;
       if (e.code === 'KeyP' || e.code === 'Escape') this.pauseRequested = true;
       if (e.code === 'KeyM') this.muteRequested = true;
+      if (e.code === 'KeyZ') this.ainaRequested = true;
+      if (e.code === 'KeyX') this.aleixRequested = true;
       this.pressed = true;
     });
 
@@ -89,6 +94,11 @@ export class Input {
       this.pauseRequested = true;
     }
     this.padStartWasDown = start;
+    // X → Aina (pista), Y → Aleix (señuelo)
+    const helpers = [b(2), b(3)];
+    if (helpers[0] && !this.padHelperDown[0]) this.ainaRequested = true;
+    if (helpers[1] && !this.padHelperDown[1]) this.aleixRequested = true;
+    this.padHelperDown = helpers;
   }
 
   /** ¿Se pulsó algo desde la última consulta? (para pantallas de título) */
@@ -100,6 +110,26 @@ export class Input {
 
   requestPause(): void {
     this.pauseRequested = true;
+  }
+
+  requestAina(): void {
+    this.ainaRequested = true;
+  }
+
+  requestAleix(): void {
+    this.aleixRequested = true;
+  }
+
+  consumeAina(): boolean {
+    const r = this.ainaRequested;
+    this.ainaRequested = false;
+    return r;
+  }
+
+  consumeAleix(): boolean {
+    const r = this.aleixRequested;
+    this.aleixRequested = false;
+    return r;
   }
 
   requestMute(): void {

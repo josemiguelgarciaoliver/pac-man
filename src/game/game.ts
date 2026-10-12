@@ -1,27 +1,38 @@
 import type { AudioManager } from '../audio/audio';
-import { levelPosition } from '../data/worlds';
-import { drawText, drawTextCentered, drawTextRight } from '../engine/font';
+import { FAMILY, levelPhrase } from '../data/family';
+import { ORIGINAL_PAC_SPAWN } from '../data/mazes/original';
+import { TOTAL_LEVELS } from '../data/worlds';
+import { CHAR_W, drawText, drawTextCentered, drawTextRight } from '../engine/font';
 import type { Input } from '../input/input';
-import { ORIGINAL_MAZE, ORIGINAL_PAC_SPAWN } from '../data/mazes/original';
 import { HOUSE_DOOR_TILE, SCATTER_TARGETS, chaseTarget, type GhostName, type Tile } from './actors/ai';
 import { Ghost, type MoveEnv } from './actors/ghost';
 import { PacMan } from './actors/pacman';
 import { BASE_SPEED, COLORS, Dir, MAZE_TOP, SCREEN_H, SCREEN_W, TICK_RATE, TILE } from './constants';
+import { FamilyHelpers } from './familyHelpers';
+import { arcadeEquivalent } from './level/curve';
+import { buildLevel } from './level/levels';
+import { nearestTile } from './level/placement';
+import type { LevelDef } from './level/schema';
 import { Maze } from './maze/maze';
 import { renderWalls } from './maze/render';
+import { createMechanics, type Mechanic } from './mechanics';
+import { Mission } from './missions';
 import { createRng, type Rng } from './random';
 import { DIFFICULTIES, DIFFICULTY_PRESETS, FRUIT_POINTS, GHOST_POINTS, GLOBAL_RELEASE, fruitForLevel, getLevelRules, type Difficulty, type LevelRules } from './rules';
 import { drawFruit, drawGhost, drawPac, drawPacDeath, type GhostLook } from './sprites';
 
-type State = 'title' | 'ready' | 'play' | 'ghostEaten' | 'dying' | 'clear' | 'gameover' | 'paused';
+type State = 'title' | 'ready' | 'play' | 'ghostEaten' | 'dying' | 'clear' | 'gameover' | 'victory' | 'paused';
 
 const READY_TICKS = 2 * TICK_RATE;
+/** La tarjeta de nivel se ve antes del "READY!" final. */
+const CARD_TICKS = 150;
 const CLEAR_TICKS = 2 * TICK_RATE;
 const GHOST_EATEN_TICKS = TICK_RATE;
 const DEATH_FREEZE = 45;
 const DEATH_FRAME_TICKS = 8;
 const DEATH_FRAMES = 11;
 const GAMEOVER_TICKS = 3 * TICK_RATE;
+const VICTORY_TICKS = 10 * TICK_RATE;
 const FLASH_PERIOD = 14;
 const HOUSE_SPEED = 0.5;
 const EATEN_SPEED = (BASE_SPEED * 1.6) / TICK_RATE;
@@ -34,6 +45,8 @@ const FRUIT_SPAWN_AT = [70, 170];
 const FRUIT_TICKS = 9 * TICK_RATE + 30;
 /** Fila de pantalla (con el HUD) donde el arcade escribe READY!, justo bajo la casa de fantasmas. */
 const MESSAGE_Y = 20 * TILE + 1;
+const MAX_FRUITS_SHOWN = 4;
+const MAX_LIVES_SHOWN = 4;
 
 const GHOST_NAMES: GhostName[] = ['blinky', 'pinky', 'inky', 'clyde'];
 const HOUSE_ORDER: Exclude<GhostName, 'blinky'>[] = ['pinky', 'inky', 'clyde'];
@@ -64,11 +77,15 @@ const readHighScore = (): number => {
 };
 
 export class Game {
-  private maze = new Maze(ORIGINAL_MAZE, ORIGINAL_PAC_SPAWN);
+  private levelDef!: LevelDef;
+  private maze!: Maze;
+  private walls!: HTMLCanvasElement;
+  private wallsWhite: HTMLCanvasElement | null = null;
+  private mission!: Mission;
+  private mechanics: Mechanic[] = [];
+  private helpers = new FamilyHelpers();
   private pac = new PacMan(ORIGINAL_PAC_SPAWN.x, ORIGINAL_PAC_SPAWN.y);
   private ghosts = GHOST_NAMES.map((n) => new Ghost(n));
-  private wallsBlue = renderWalls(this.maze, COLORS.wall);
-  private wallsWhite = renderWalls(this.maze, COLORS.wallFlash);
   private rng: Rng = createRng(Date.now());
 
   private state: State = 'title';
@@ -84,9 +101,12 @@ export class Game {
   private lives = 2;
   private level = 1;
   private difficulty: Difficulty = readDifficulty();
-  private rules: LevelRules = getLevelRules(1, this.difficulty);
+  private rules!: LevelRules;
   /** La primera partida espera a que acabe la melodía de inicio. */
   private introJingle = false;
+  /** Tarjeta de inicio de nivel visible durante el "ready". */
+  private cardActive = false;
+  private timeUp = false;
 
   // Modos de los fantasmas
   private modeIndex = 0;
@@ -109,8 +129,10 @@ export class Game {
     private readonly input: Input,
     private readonly audio: AudioManager,
   ) {
-    // ?autostart salta la pantalla de título (útil para pruebas E2E y capturas).
-    if (new URLSearchParams(location.search).has('autostart')) this.startGame();
+    this.loadLevel(1);
+    const params = new URLSearchParams(location.search);
+    // ?autostart salta la pantalla de título; ?level=N empieza en ese nivel (pruebas y capturas).
+    if (params.has('autostart')) this.startGame(Number(params.get('level')) || 1);
   }
 
   // ───────────────────────── Ciclo de vida ─────────────────────────
@@ -120,8 +142,10 @@ export class Game {
     this.input.poll();
     const pressed = this.input.consumePress();
     if (this.input.consumeMute()) this.audio.toggleMute();
-    // Se consume siempre: una pausa pedida en pantalla de título no debe quedar pendiente.
+    // Se consumen siempre: una petición hecha fuera de partida no debe quedar pendiente.
     const pauseRequested = this.input.consumePause();
+    const ainaRequested = this.input.consumeAina();
+    const aleixRequested = this.input.consumeAleix();
 
     switch (this.state) {
       case 'title':
@@ -136,6 +160,8 @@ export class Game {
           this.pause();
           break;
         }
+        if (ainaRequested) this.useAina();
+        if (aleixRequested) this.useAleix();
         this.updatePlay();
         break;
       case 'ghostEaten':
@@ -151,6 +177,9 @@ export class Game {
       case 'gameover':
         if (--this.timer <= 0) this.state = 'title';
         break;
+      case 'victory':
+        if (--this.timer <= 0 || (pressed && this.timer < VICTORY_TICKS - 120)) this.state = 'title';
+        break;
       case 'paused':
         if (pauseRequested) {
           this.state = this.resumeState;
@@ -158,6 +187,11 @@ export class Game {
         }
         break;
     }
+  }
+
+  /** Estado de las habilidades de los hijos (para los botones en pantalla). */
+  helperState(): { aina: boolean; aleix: boolean } {
+    return { aina: this.helpers.ainaReady, aleix: this.helpers.aleixReady };
   }
 
   /** En el título, izquierda/derecha (teclas, swipe o cruceta) cambian la dificultad. */
@@ -176,7 +210,7 @@ export class Game {
       return;
     }
     if (dir !== null) this.input.direction = null;
-    if (pressed && dir === null) this.startGame();
+    if (pressed && dir === null) this.startGame(1);
   }
 
   /** Pausa automática al perder el foco (no hace nada si no se está jugando). */
@@ -190,26 +224,41 @@ export class Game {
     this.audio.suspend();
   }
 
-  private startGame(): void {
+  private startGame(level: number): void {
     this.score = 0;
     this.lives = DIFFICULTY_PRESETS[this.difficulty].lives;
-    this.level = 1;
+    this.level = Math.min(Math.max(Math.floor(level), 1), TOTAL_LEVELS);
     this.introJingle = true;
     this.startLevel();
   }
 
+  /** Carga laberinto, misión y mecánicas del nivel (el laberinto se reutiliza si no cambia). */
+  private loadLevel(n: number): void {
+    const def = buildLevel(n);
+    if (!this.levelDef || this.levelDef.level !== def.level) {
+      this.maze = new Maze(def.maze, ORIGINAL_PAC_SPAWN);
+      this.walls = renderWalls(this.maze, def.wallColor);
+      this.wallsWhite = null;
+    }
+    this.levelDef = def;
+    this.rules = getLevelRules(def.arcadeLevel, this.difficulty);
+    this.mission = new Mission(def.mission, def.maze, createRng(def.level * 7919));
+    this.mechanics = createMechanics(def.mechanics, def.maze, createRng(def.level * 104729 + 1));
+    this.helpers.reset();
+  }
+
   private startLevel(): void {
-    this.rules = getLevelRules(this.level, this.difficulty);
+    this.loadLevel(this.level);
     this.maze.resetPellets();
     this.personal = { pinky: 0, inky: 0, clyde: 0 };
     this.globalMode = false;
     this.globalCounter = 0;
     this.elroyEnabled = true;
-    this.beginReady();
+    this.beginReady(true);
   }
 
   /** Coloca a todos en su sitio de salida (nivel nuevo o tras perder una vida). */
-  private beginReady(): void {
+  private beginReady(newLevel = false): void {
     this.pac.reset();
     for (const g of this.ghosts) g.reset();
     this.input.direction = null;
@@ -221,19 +270,27 @@ export class Game {
     this.fruitTicks = 0;
     this.popups = [];
     this.eatenGhost = null;
+    this.timeUp = false;
     this.initBlinky();
     this.audio.setAmbient(null);
     this.state = 'ready';
-    this.timer = READY_TICKS;
+    this.cardActive = newLevel;
+    this.timer = newLevel ? CARD_TICKS + READY_TICKS : READY_TICKS;
     if (this.introJingle) {
       this.introJingle = false;
       this.audio.play('start');
-      // Si la melodía ya cargó, READY! dura lo que ella (≈4 s en el arcade).
-      this.timer = Math.max(READY_TICKS, Math.round(this.audio.duration('start') * TICK_RATE));
+      // Si la melodía ya cargó, la espera dura lo que ella (≈4 s en el arcade).
+      this.timer = Math.max(this.timer, Math.round(this.audio.duration('start') * TICK_RATE));
     }
   }
 
   private nextLevel(): void {
+    if (this.level >= TOTAL_LEVELS) {
+      this.state = 'victory';
+      this.timer = VICTORY_TICKS;
+      this.audio.play('intermission');
+      return;
+    }
     this.level++;
     this.startLevel();
   }
@@ -259,14 +316,12 @@ export class Game {
 
   private targetFor(g: Ghost): Tile {
     if (g.state === 'eaten') return HOUSE_DOOR_TILE;
-    if (this.isScatter() && !(g.name === 'blinky' && g.elroy > 0)) return SCATTER_TARGETS[g.name];
+    const decoy = this.helpers.decoy;
+    // El señuelo de Aleix obliga a los fantasmas a perseguirlo, también en dispersión.
+    if (!decoy && this.isScatter() && !(g.name === 'blinky' && g.elroy > 0)) return SCATTER_TARGETS[g.name];
     const blinky = this.ghost('blinky');
-    return chaseTarget(
-      g.name,
-      { col: g.col, row: g.row },
-      { col: this.pac.col, row: this.pac.row, dir: this.pac.dir },
-      { col: blinky.col, row: blinky.row },
-    );
+    const quarry = decoy ? { col: decoy.col, row: decoy.row, dir: Dir.Left } : { col: this.pac.col, row: this.pac.row, dir: this.pac.dir };
+    return chaseTarget(g.name, { col: g.col, row: g.row }, quarry, { col: blinky.col, row: blinky.row });
   }
 
   private ghostSpeed(g: Ghost): number {
@@ -279,6 +334,13 @@ export class Game {
     else if (g.elroy === 2) pct = r.elroy2Speed;
     else if (g.elroy === 1) pct = r.elroy1Speed;
     return (BASE_SPEED * pct) / TICK_RATE;
+  }
+
+  /** Velocidad del fantasma más el efecto de cintas y similares (nunca menos de 0,1 px/tick). */
+  private ghostSpeedWithMechanics(g: Ghost): number {
+    let speed = this.ghostSpeed(g);
+    for (const m of this.mechanics) speed += m.ghostSpeedDelta?.(g) ?? 0;
+    return Math.max(0.1, speed);
   }
 
   private pacSpeed(): number {
@@ -296,16 +358,29 @@ export class Game {
       this.eat();
     }
 
+    const env = { maze: this.maze, pac: this.pac, ghosts: this.ghosts };
+    for (const m of this.mechanics) m.update(env);
+    this.mission.update(this.pac);
+    if (this.mission.consumeEnergizerRespawn()) this.maze.respawnEnergizers();
+
     this.updateModes();
     this.updateHouse();
     this.updateElroy();
-    for (const g of this.ghosts) g.move(this.envFor(g), this.ghostSpeed(g));
+    for (const g of this.ghosts) g.move(this.envFor(g), this.ghostSpeedWithMechanics(g));
     this.updateFruit();
     this.updatePopups();
+    this.helpers.update();
     this.updateAmbient();
 
     if (this.checkCollisions()) return;
-    if (this.maze.pelletsLeft === 0) {
+    if (this.mission.failed()) {
+      this.timeUp = true;
+      this.audio.setAmbient(null);
+      this.state = 'dying';
+      this.timer = 0;
+      return;
+    }
+    if (this.mission.isComplete(this.pac, this.maze.pelletsLeft)) {
       this.audio.setAmbient(null);
       this.state = 'clear';
       this.timer = CLEAR_TICKS;
@@ -343,6 +418,30 @@ export class Game {
     blinky.elroy = !this.elroyEnabled ? 0 : left <= this.rules.elroy2Dots ? 2 : left <= this.rules.elroy1Dots ? 1 : 0;
   }
 
+  // ───────────────────────── Ayudantes de la familia ─────────────────────────
+
+  /** A dónde debe apuntar la Pista de Aina según la misión. */
+  private objectiveTarget(): Tile | null {
+    const from = { col: this.pac.col, row: this.pac.row };
+    const fromMission = this.mission.target(from);
+    if (fromMission) return fromMission;
+    const lines = this.levelDef.maze;
+    if (this.mission.def.type === 'HUNT') {
+      const scared = this.ghosts.find((g) => g.frightened && g.state === 'active');
+      if (scared) return { col: Math.min(Math.max(scared.col, 0), 27), row: scared.row };
+      return nearestTile(lines, from, (t) => this.maze.pelletAt(t.col, t.row) === 'energizer');
+    }
+    return nearestTile(lines, from, (t) => this.maze.pelletAt(t.col, t.row) !== undefined);
+  }
+
+  private useAina(): void {
+    this.helpers.useAina(this.levelDef.maze, { col: this.pac.col, row: this.pac.row }, this.objectiveTarget());
+  }
+
+  private useAleix(): void {
+    this.helpers.useAleix({ col: this.pac.col, row: this.pac.row });
+  }
+
   // ───────────────────────── Comer ─────────────────────────
 
   private eat(): void {
@@ -373,9 +472,10 @@ export class Game {
     this.fruitTicks--;
     if (this.pac.col === FRUIT_TILE.col || this.pac.col === FRUIT_TILE.col + 1) {
       if (this.pac.row === FRUIT_TILE.row && Math.abs(this.pac.x - FRUIT_X) < 6) {
-        const points = FRUIT_POINTS[fruitForLevel(this.level)];
+        const points = FRUIT_POINTS[this.rules.fruit];
         this.addScore(points);
         this.audio.play('eat_fruit');
+        this.helpers.rechargeAina();
         this.popups.push({ x: FRUIT_X, y: FRUIT_Y, text: String(points), ticks: 2 * TICK_RATE });
         this.fruitTicks = 0;
       }
@@ -474,6 +574,7 @@ export class Game {
     const points = GHOST_POINTS[Math.min(this.frightCombo, 3)];
     this.frightCombo++;
     this.addScore(points);
+    this.mission.onGhostEaten();
     this.audio.play('eat_ghost');
     g.state = 'eaten';
     g.frightened = false;
@@ -488,6 +589,12 @@ export class Game {
     if (--this.timer <= 0) {
       this.eatenGhost = null;
       this.state = 'play';
+      // La misión puede completarse justo al comer al último fantasma.
+      if (this.mission.isComplete(this.pac, this.maze.pelletsLeft)) {
+        this.audio.setAmbient(null);
+        this.state = 'clear';
+        this.timer = CLEAR_TICKS;
+      }
     }
   }
 
@@ -505,6 +612,7 @@ export class Game {
     this.globalMode = true;
     this.globalCounter = 0;
     this.elroyEnabled = false;
+    if (this.timeUp) this.mission = new Mission(this.levelDef.mission, this.levelDef.maze, createRng(this.levelDef.level * 7919));
     this.beginReady();
   }
 
@@ -519,20 +627,33 @@ export class Game {
       this.drawTitle(ctx);
       return;
     }
+    if (this.state === 'victory') {
+      this.drawVictory(ctx);
+      return;
+    }
 
     const flashWhite = this.state === 'clear' && Math.floor(this.timer / 15) % 2 === 0;
-    ctx.drawImage(flashWhite ? this.wallsWhite : this.wallsBlue, 0, MAZE_TOP, this.maze.cols * TILE, this.maze.rows * TILE);
-    if (this.state !== 'clear') this.drawPellets(ctx);
-    if (this.fruitTicks > 0 && this.state !== 'clear') drawFruit(ctx, fruitForLevel(this.level), FRUIT_X, MAZE_TOP + FRUIT_Y);
+    if (flashWhite) this.wallsWhite ??= renderWalls(this.maze, '#ffffff');
+    ctx.drawImage(flashWhite ? this.wallsWhite! : this.walls, 0, MAZE_TOP, this.maze.cols * TILE, this.maze.rows * TILE);
+    if (this.state !== 'clear') {
+      for (const m of this.mechanics) m.draw(ctx, this.frame);
+      this.mission.draw(ctx, this.frame);
+      this.drawPellets(ctx);
+    }
+    if (this.fruitTicks > 0 && this.state !== 'clear') drawFruit(ctx, this.rules.fruit, FRUIT_X, MAZE_TOP + FRUIT_Y);
+    this.helpers.draw(ctx, this.frame);
 
     const hideGhosts = this.state === 'clear' || (this.state === 'dying' && this.timer >= DEATH_FREEZE);
     if (!hideGhosts) this.drawGhosts(ctx);
     this.drawPac(ctx);
     this.drawPopups(ctx);
 
-    if (this.state === 'ready') drawTextCentered(ctx, 'READY!', SCREEN_W / 2, MESSAGE_Y, COLORS.ready);
+    const cardVisible = this.state === 'ready' && this.cardActive && this.timer > READY_TICKS;
+    if (this.state === 'ready' && !cardVisible) drawTextCentered(ctx, 'READY!', SCREEN_W / 2, MESSAGE_Y, COLORS.ready);
     if (this.state === 'paused') drawTextCentered(ctx, 'PAUSE', SCREEN_W / 2, MESSAGE_Y, COLORS.ready);
     if (this.state === 'gameover') drawTextCentered(ctx, 'GAME  OVER', SCREEN_W / 2, MESSAGE_Y, '#ff2a2a');
+    if (this.state === 'dying' && this.timeUp) drawTextCentered(ctx, 'TIME UP!', SCREEN_W / 2, MESSAGE_Y, '#ff2a2a');
+    if (cardVisible) this.drawCard(ctx, Math.min(1, (this.timer - READY_TICKS) / 12));
     this.drawFooter(ctx);
   }
 
@@ -564,7 +685,7 @@ export class Game {
 
   private drawPopups(ctx: CanvasRenderingContext2D): void {
     for (const p of this.popups) {
-      const w = p.text.length * 8;
+      const w = p.text.length * CHAR_W;
       drawText(ctx, p.text, Math.round(p.x - w / 2), Math.round(MAZE_TOP + p.y - 4), '#27e8ff');
     }
   }
@@ -576,22 +697,93 @@ export class Game {
     drawTextRight(ctx, this.state === 'title' ? '00' : String(this.score).padStart(2, '0'), 7 * TILE, TILE, COLORS.text);
     drawTextRight(ctx, String(this.high).padStart(2, '0'), 17 * TILE, TILE, COLORS.text);
 
-    if (this.state !== 'title') {
-      const pos = levelPosition(this.level);
-      drawTextRight(ctx, `MUNDO ${pos.world}`, SCREEN_W - 4, 0, '#7fa0ff');
-      drawTextRight(ctx, `NIVEL ${pos.stage}`, SCREEN_W - 4, TILE, COLORS.text);
+    if (this.state === 'title' || this.state === 'victory') return;
+    drawTextRight(ctx, `MUNDO ${this.levelDef.world}`, SCREEN_W - 4, 0, this.levelDef.wallColor);
+    drawTextRight(ctx, `NIVEL ${this.levelDef.stage}`, SCREEN_W - 4, TILE, COLORS.text);
+    this.drawHelperBadge(ctx, 10, 20, 'A', FAMILY.aina.color, this.helpers.ainaReady);
+    this.drawHelperBadge(ctx, 24, 20, 'L', FAMILY.aleix.color, this.helpers.aleixReady);
+  }
+
+  private drawHelperBadge(ctx: CanvasRenderingContext2D, x: number, y: number, letter: string, color: string, ready: boolean): void {
+    ctx.save();
+    if (ready) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = ctx.getTransform().a * 2;
     }
+    ctx.fillStyle = ready ? color : '#3a3d55';
+    ctx.beginPath();
+    ctx.arc(x, y, 4.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.fillStyle = ready ? '#10122a' : '#757a99';
+    ctx.font = "800 5.6px 'Trebuchet MS', Arial, sans-serif";
+    ctx.textAlign = 'center';
+    ctx.fillText(letter, x, y + 2);
+    ctx.restore();
+  }
+
+  /** Tarjeta de inicio de nivel: mundo, nivel, misión y una frase de la familia. */
+  private drawCard(ctx: CanvasRenderingContext2D, alpha: number): void {
+    const def = this.levelDef;
+    const [g1, g2] = this.mission.goalLines();
+    const phrase = levelPhrase(def.level);
+    const who = FAMILY[phrase.who];
+    const x = 10;
+    const y = 60;
+    const w = SCREEN_W - 20;
+    const h = 132;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.shadowColor = def.wallColor;
+    ctx.shadowBlur = ctx.getTransform().a * 4;
+    ctx.fillStyle = 'rgba(2,3,28,0.95)';
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 7);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = def.wallColor;
+    ctx.lineWidth = 1.3;
+    ctx.stroke();
+    const cx = SCREEN_W / 2;
+    drawTextCentered(ctx, `MUNDO ${def.world}`, cx, y + 9, def.wallColor);
+    drawTextCentered(ctx, def.name.toUpperCase(), cx, y + 21, COLORS.text);
+    drawTextCentered(ctx, `NIVEL ${def.stage}`, cx, y + 36, COLORS.ready);
+    const special = def.mission.type !== 'CLEAR';
+    drawTextCentered(ctx, g1, cx, y + 55, special ? '#ffee22' : '#cfd8ff');
+    if (g2) drawTextCentered(ctx, g2, cx, y + 66, special ? '#ffee22' : '#cfd8ff');
+    drawTextCentered(ctx, `${who.name}:`, cx, y + 88, who.color);
+    drawTextCentered(ctx, phrase.lines[0], cx, y + 100, COLORS.text);
+    drawTextCentered(ctx, phrase.lines[1], cx, y + 112, COLORS.text);
+    ctx.restore();
   }
 
   private drawTitle(ctx: CanvasRenderingContext2D): void {
     drawTextCentered(ctx, 'PAC-MAN', SCREEN_W / 2, 10 * TILE, COLORS.ready);
+    drawTextCentered(ctx, '100 NIVELES  10 MUNDOS', SCREEN_W / 2, 12 * TILE, '#7fa0ff');
+    drawTextCentered(ctx, 'CON CELY  AINA  Y ALEIX', SCREEN_W / 2, 14 * TILE, FAMILY.cely.color);
     if (Math.floor(this.frame / 30) % 2 === 0) {
       drawTextCentered(ctx, 'PUSH START', SCREEN_W / 2, 18 * TILE, COLORS.text);
     }
     drawTextCentered(ctx, 'TAP  KEY  BUTTON', SCREEN_W / 2, 21 * TILE, COLORS.dot);
     drawTextCentered(ctx, 'DIFICULTAD', SCREEN_W / 2, 24 * TILE, '#7fa0ff');
     drawTextCentered(ctx, `< ${DIFFICULTY_PRESETS[this.difficulty].label} >`, SCREEN_W / 2, 26 * TILE, COLORS.ready);
+    drawTextCentered(ctx, 'Z AINA  X ALEIX  P PAUSA', SCREEN_W / 2, 29 * TILE, '#ffb347');
     drawTextCentered(ctx, this.audio.muted ? 'SOUND OFF  M' : 'SOUND ON  M', SCREEN_W / 2, 31 * TILE, '#7fa0ff');
+  }
+
+  private drawVictory(ctx: CanvasRenderingContext2D): void {
+    const cx = SCREEN_W / 2;
+    const pulse = 0.7 + 0.3 * Math.sin(this.frame / 8);
+    drawTextCentered(ctx, 'ENHORABUENA!', cx, 8 * TILE, COLORS.ready);
+    drawTextCentered(ctx, 'CELY ESTA A SALVO', cx, 12 * TILE, FAMILY.cely.color);
+    drawTextCentered(ctx, 'LA FAMILIA VUELVE A', cx, 15 * TILE, COLORS.text);
+    drawTextCentered(ctx, 'ESTAR JUNTA', cx, 17 * TILE, COLORS.text);
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    drawTextCentered(ctx, 'AINA   ALEIX   CELY', cx, 21 * TILE, '#7fd7ff');
+    ctx.restore();
+    drawTextCentered(ctx, `PUNTOS ${this.score}`, cx, 25 * TILE, '#cfd8ff');
   }
 
   private drawPellets(ctx: CanvasRenderingContext2D): void {
@@ -632,10 +824,12 @@ export class Game {
 
   private drawFooter(ctx: CanvasRenderingContext2D): void {
     const y = MAZE_TOP + 31 * TILE + 9;
-    for (let i = 0; i < Math.min(this.lives, 5); i++) drawPac(ctx, 24 + i * 16, y, 1, 2);
-    // Últimas 7 frutas de los niveles jugados, la más reciente a la derecha.
-    for (let k = 0; k < Math.min(this.level, 7); k++) {
-      drawFruit(ctx, fruitForLevel(this.level - k), SCREEN_W - 16 - k * 16, y);
+    for (let i = 0; i < Math.min(this.lives, MAX_LIVES_SHOWN); i++) drawPac(ctx, 24 + i * 16, y, 1, 2);
+    const hud = this.mission.hud();
+    if (hud) drawText(ctx, hud, 92, y - 4, '#ffee22');
+    // Últimas frutas de los niveles jugados, la más reciente a la derecha.
+    for (let k = 0; k < Math.min(this.level, MAX_FRUITS_SHOWN); k++) {
+      drawFruit(ctx, fruitForLevel(arcadeEquivalent(this.level - k)), SCREEN_W - 16 - k * 16, y);
     }
   }
 }

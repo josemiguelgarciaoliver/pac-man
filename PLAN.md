@@ -412,16 +412,16 @@ Cada fase acaba en un hito jugable y desplegado en GitHub Pages.
 - **Hito:** el juego se instala y se juega bien en móvil, tablet y PC.
 
 ### Fase 5 — Sistema de niveles y herramientas
-- [ ] Esquema JSON de nivel (laberinto, paleta, mecánicas, misión, parámetros de dificultad y diálogos) validado con **Zod**.
-- [ ] Curva de dificultad `A(n)` y mapeo a las tablas arcade.
-- [ ] **Generador procedural** de laberintos con restricciones arcade.
-- [ ] **Validador** (conectividad, sin callejones, unicidad por hash) integrado en CI.
-- [ ] **Editor visual** de laberintos y mecánicas (`/editor`, solo en dev) con prueba instantánea.
-- [ ] Sistema de **misiones** (CLEAR, RESCUE, REACH, COLLECT, SURVIVE, HUNT, ESCORT, BOSS).
-- [ ] **Temática familiar:** `family.json` (personajes, frases por nivel, cartas), tarjeta de inicio de nivel, habilidades de Aina (*Pista*) y Aleix (*Señuelo*) con sus botones táctiles/teclado/mando, y objeto oculto de Cely por nivel (§4.5).
-- [ ] Framework de **mecánicas como plugins** (`Mechanic` con hooks `onTick`, `onEnterTile`, `modifySpeed`, `render`…).
-- [ ] Bot de simulación *headless* para balancear.
-- **Hito:** un nivel de prueba con cinta transportadora y misión RESCUE, cargado 100 % desde datos.
+- [x] Esquema de nivel validado con **Zod** (`level/schema.ts`): laberinto, paleta, misión y mecánicas; los 100 niveles se construyen y validan en los tests.
+- [x] Curva de dificultad en diente de sierra `arcadeEquivalent(n)` (`level/curve.ts`) + tres niveles de dificultad (Fácil por defecto, Normal, Arcade) elegibles en el título.
+- [x] **Generador procedural** de laberintos (`maze/generator.ts`): banda central del original + zonas generadas con tramos parciales, sin callejones ni macizos de pared. Banda central compartida (limitación conocida).
+- [x] **Validador** (conectividad, callejones, 2×2, simetría, puntos, calidad estética, unicidad y distancia mínima de 30 casillas entre laberintos); corre en CI como parte de `npm test`.
+- [ ] **Editor visual** de laberintos y mecánicas (`/editor`, solo en dev) con prueba instantánea. *(Pendiente)*
+- [~] Sistema de **misiones**: hechas CLEAR, COLLECT, REACH, RESCUE, HUNT y SURVIVE (con tarjeta de objetivo, progreso en pantalla y límite de tiempo). Pendientes: ESCORT y BOSS.
+- [x] **Temática familiar** (§4.5): frases por nivel en `data/family.ts`, tarjeta de inicio, Pista de Aina (Z / botón / mando X) y Señuelo de Aleix (X / botón / mando Y) con una carga por nivel, y final con Cely. Pendiente: objeto oculto de Cely y cartas (con el Álbum, Fase 6).
+- [x] Framework de **mecánicas como plugins** (`mechanics/`): interfaz `Mechanic` + primera mecánica, las cintas transportadoras (opcionalmente invertibles y que arrastran a los fantasmas).
+- [~] Bot de simulación *headless* (`tests/sim.test.ts`): juega 6000 ticks en 17 niveles comprobando que nadie atraviesa paredes (ya encontró y corrigió un fallo de las cintas). Pendiente: estadísticas de victoria para balancear.
+- **Hito:** conseguido: los niveles 21–29 (cintas), 25 (tuercas), 28 (cintas + RESCUE) y otros se cargan 100 % desde datos.
 
 ### Fase 6 — Progresión, menús y persistencia
 - [ ] Menú principal, mapa de mundos (estilo arcade), selector de niveles y estrellas ★.

@@ -47,7 +47,7 @@ startLoop(
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     game.render(ctx);
-    controls.update();
+    controls.update(game.helperState());
   },
 );
 
