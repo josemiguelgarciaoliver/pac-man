@@ -42,15 +42,8 @@ describe('reglas por nivel', () => {
     expect(r.ghostSpeed).toBeCloseTo(0.6, 5);
     expect(r.frightTicks).toBe(360);
   });
-  it('el estado asustado dura cada vez menos y desaparece en el último nivel', () => {
-    let prev = Infinity;
-    for (let n = 1; n <= 100; n++) {
-      const ticks = rulesAt(n).frightTicks;
-      expect(ticks, `nivel ${n}`).toBeLessThanOrEqual(prev);
-      prev = ticks;
-    }
-    expect(rulesAt(1).frightTicks).toBe(360);
-    expect(rulesAt(100).frightTicks).toBe(0);
+  it('el estado asustado dura siempre lo mismo, del nivel 1 al 100', () => {
+    for (const preset of ['easy', 'normal', 'arcade'] as const) for (let n = 1; n <= 100; n++) expect(rulesAt(n, preset).frightTicks, `nivel ${n} ${preset}`).toBe(360);
   });
   it('la última fase del calendario es persecución infinita', () => {
     for (const lv of [1, 2, 5, 30]) {
@@ -136,7 +129,7 @@ describe('dificultad', () => {
       const arcade = rulesAt(level, 'arcade');
       expect(easy.ghostSpeed).toBeLessThan(arcade.ghostSpeed);
       expect(easy.pacSpeed).toBeGreaterThan(arcade.pacSpeed);
-      expect(easy.frightTicks).toBeGreaterThan(arcade.frightTicks);
+      expect(easy.frightTicks).toBe(arcade.frightTicks);
       expect(easy.elroy1Dots).toBeLessThanOrEqual(arcade.elroy1Dots);
     }
     // En el último nivel el preset ya no ayuda en nada.
@@ -164,7 +157,6 @@ describe('progresión del 1 al 100', () => {
   for (const preset of DIFFICULTIES) {
     it(`la presión sobre el jugador solo sube (preset ${preset})`, () => {
       let prevRatio = 0;
-      let prevFright = Infinity;
       let prevScatter = Infinity;
       let prevElroy = -1;
       let prevGhost = 0;
@@ -172,21 +164,18 @@ describe('progresión del 1 al 100', () => {
         const r = rulesAt(n, preset);
         const ratio = r.ghostSpeed / r.pacSpeed;
         expect(ratio, `nivel ${n}: fantasmas/Pac-Man`).toBeGreaterThanOrEqual(prevRatio - 1e-9);
-        expect(r.frightTicks, `nivel ${n}: tiempo asustado`).toBeLessThanOrEqual(prevFright);
         expect(r.schedule[0], `nivel ${n}: primera dispersión`).toBeLessThanOrEqual(prevScatter);
         expect(r.elroy1Dots, `nivel ${n}: Elroy`).toBeGreaterThanOrEqual(prevElroy);
         expect(r.ghostSpeed, `nivel ${n}: velocidad fantasmas`).toBeGreaterThanOrEqual(prevGhost - 1e-9);
         prevRatio = ratio;
-        prevFright = r.frightTicks;
         prevScatter = r.schedule[0];
         prevElroy = r.elroy1Dots;
         prevGhost = r.ghostSpeed;
       }
     });
 
-    it(`el nivel 100 es prácticamente imposible (preset ${preset}): fantasmas mucho más rápidos, sin asustados ni respiro`, () => {
+    it(`el nivel 100 es prácticamente imposible (preset ${preset}): fantasmas mucho más rápidos, sin respiro`, () => {
       const r = rulesAt(100, preset);
-      expect(r.frightTicks).toBe(0);
       expect(r.ghostSpeed / r.pacSpeed).toBeGreaterThan(1.4);
       expect(r.schedule[0]).toBeLessThanOrEqual(90); // la dispersión dura como mucho 1,5 s
       expect(r.elroy1Dots).toBeGreaterThanOrEqual(100);

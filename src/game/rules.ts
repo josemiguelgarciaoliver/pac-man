@@ -69,6 +69,8 @@ export const DIFFICULTY_PRESETS: Record<Difficulty, DifficultyPreset> = {
   arcade: { label: 'ARCADE', ghostSpeed: 1, pacSpeed: 1, fright: 1, frightMin: 0, scatter: 1, chase: 1, elroy: true, lives: 2 },
 };
 
+/** Duración fija del estado asustado (ticks). */
+export const FRIGHT_TICKS = 6 * TICK_RATE;
 const s = (seconds: number) => Math.round(seconds * TICK_RATE);
 
 const FRUIT_BY_LEVEL: FruitKind[] = [
@@ -116,11 +118,8 @@ export function getLevelRules(level: number, difficulty: Difficulty = 'arcade', 
   const ghostSpeed = ghostBase * gMul * ghostEase;
   const pacSpeed = Math.min(1.2, pacBase * pMul);
 
-  // Estado asustado: de 6 s a ninguno en el último nivel.
-  const frightSeconds = 6 * (1 - p) ** 1.35;
-  const frightMul = d.fright + (1 - d.fright) * fade;
-  const frightMin = d.frightMin * (1 - p) ** 2;
-  const frightTicks = p >= 0.995 ? 0 : Math.max(Math.round(s(frightSeconds) * frightMul), Math.round(frightMin));
+  // Estado asustado: dura siempre lo mismo (6 s) del nivel 1 al 100, con cualquier dificultad.
+  const frightTicks = FRIGHT_TICKS;
 
   // Dispersión (respiro) y persecución: la dispersión se encoge hasta casi desaparecer.
   const base = global === 1 ? [7, 20, 7, 20, 5, 20, 5] : global <= 15 ? [7, 20, 7, 20, 5, 1033, 0] : [5, 20, 5, 20, 5, 1037, 0];
@@ -150,7 +149,7 @@ export function getLevelRules(level: number, difficulty: Difficulty = 'arcade', 
     elroy2Dots: Math.round((elroy1 / 2) * elroyShare),
     elroy2Speed: ghostSpeed * 1.13,
     frightTicks,
-    flashes: frightTicks === 0 ? 0 : frightSeconds >= 3 ? 5 : 3,
+    flashes: 5,
     schedule,
     fruit: fruitForLevel(level),
     houseLimits: level === 1 ? { pinky: 0, inky: 30, clyde: 60 } : level === 2 ? { pinky: 0, inky: 0, clyde: 50 } : { pinky: 0, inky: 0, clyde: 0 },
