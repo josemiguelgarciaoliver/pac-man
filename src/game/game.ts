@@ -210,8 +210,8 @@ export class Game {
       this.state = 'cutscene';
       this.timer = Number(params.get('cutscene')) || 0;
     }
-    // ?autostart salta la pantalla de título; ?level=N empieza en ese nivel (pruebas y capturas).
-    if (params.has('autostart')) this.startGame(Number(params.get('level')) || 1);
+    // Atajo de pruebas: en producción no se permite saltar al nivel elegido desde la URL.
+    if (import.meta.env.DEV && params.has('autostart')) this.startGame(Number(params.get('level')) || 1);
     // Depuración: ?fx=gun,invert,boost… activa efectos durante 60 s (solo con ?autostart).
     for (const name of (params.get('fx') ?? '').split(',').filter(Boolean)) if (name in EFFECT_INFO) this.view.add(name as keyof typeof EFFECT_INFO, 60);
   }
