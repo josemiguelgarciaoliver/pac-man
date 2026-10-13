@@ -106,7 +106,7 @@ export function getLevelRules(level: number, difficulty: Difficulty = 'arcade', 
 
   // Velocidades base (fracción del 100 %): suben juntas; luego Pac-Man pierde algo y los fantasmas se disparan.
   const pacBase = (0.8 + 0.2 * ramp) * (1 - 0.1 * p ** 2);
-  const ghostBase = (0.75 + 0.2 * ramp) * (1 + 0.38 * p ** 2.2);
+  const ghostBase = (0.75 + 0.2 * ramp) * (1 + 0.38 * p ** 4.5);
   const ghostTunnelBase = 0.4 + 0.1 * ramp;
   const ghostFrightBase = 0.5 + 0.1 * ramp;
 
