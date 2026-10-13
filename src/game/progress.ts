@@ -1,5 +1,6 @@
 import { ALBUM, albumForWorld } from '../data/album';
 import { LEVELS_PER_WORLD, TOTAL_LEVELS } from '../data/worlds';
+import { CHECKPOINT_EVERY } from './checkpoint';
 
 const KEY = 'pacman.progress';
 const SETTINGS_KEY = 'pacman.settings';
@@ -80,7 +81,19 @@ export function recordLevel(progress: Progress, level: number, result: LevelResu
 }
 
 export const totalStars = (p: Progress): number => Object.values(p.levels).reduce((n, r) => n + r.stars, 0);
-export const isLevelUnlocked = (p: Progress, level: number): boolean => level >= 1 && level <= p.unlocked;
+/**
+ * Un nivel se puede escoger si está desbloqueado y o bien es una salida de checkpoint (el checkpoint
+ * se guarda cada 2 niveles, así que se entra por los impares) o bien ya se había completado.
+ * Si no, saltarías al 50 sin haber jugado el 49.
+ */
+export const isLevelUnlocked = (p: Progress, level: number): boolean =>
+  level >= 1 && level <= p.unlocked && (level % CHECKPOINT_EVERY === 1 || level in p.levels);
+
+/** Último nivel que se puede escoger (para colocar el cursor del menú). */
+export const lastSelectableLevel = (p: Progress): number => {
+  for (let l = p.unlocked; l > 1; l--) if (isLevelUnlocked(p, l)) return l;
+  return 1;
+};
 export const isWorldUnlocked = (p: Progress, world: number): boolean => (world - 1) * LEVELS_PER_WORLD + 1 <= p.unlocked;
 export const starsOf = (p: Progress, level: number): number => p.levels[String(level)]?.stars ?? 0;
 export const worldStars = (p: Progress, world: number): number => {

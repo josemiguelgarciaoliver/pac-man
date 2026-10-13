@@ -137,3 +137,21 @@ describe('álbum familiar', () => {
     }
   });
 });
+
+describe('selección de nivel y checkpoints', () => {
+  it('no deja saltar al nivel 50 si solo se ha llegado a él desde el checkpoint del 49', () => {
+    const p = emptyProgress();
+    p.unlocked = 50;
+    expect(isLevelUnlocked(p, 49)).toBe(true); // salida del checkpoint
+    expect(isLevelUnlocked(p, 50)).toBe(false);
+    expect(isLevelUnlocked(p, 51)).toBe(false);
+  });
+
+  it('un nivel par ya completado se puede repetir', () => {
+    const p = emptyProgress();
+    p.unlocked = 50;
+    p.levels['48'] = { bestScore: 1, stars: 1, clears: 1, bestSeconds: 10 };
+    expect(isLevelUnlocked(p, 48)).toBe(true);
+    expect(isLevelUnlocked(p, 46)).toBe(false);
+  });
+});

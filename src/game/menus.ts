@@ -4,7 +4,7 @@ import { LEVELS_PER_WORLD, TOTAL_LEVELS, WORLD_NAMES } from '../data/worlds';
 import { drawText, drawTextCentered, drawTextRight } from '../engine/font';
 import { COLORS, Dir, SCREEN_H, SCREEN_W } from './constants';
 import { buildLevel } from './level/levels';
-import { isLevelUnlocked, isWorldUnlocked, starsOf, totalStars, worldStars, type Progress, type Settings } from './progress';
+import { isLevelUnlocked, isWorldUnlocked, lastSelectableLevel, starsOf, totalStars, worldStars, type Progress, type Settings } from './progress';
 import { DIFFICULTIES, DIFFICULTY_PRESETS, type Difficulty } from './rules';
 import { drawEmblem } from './theme/emblems';
 import { themeOfWorld } from './theme/worldThemes';
@@ -131,7 +131,7 @@ export class Menus {
       this.screen = 'levels';
       // Empieza seleccionando el último nivel desbloqueado del mundo.
       const first = (this.world - 1) * LEVELS_PER_WORLD + 1;
-      this.levelIndex = Math.min(LEVELS_PER_WORLD - 1, Math.max(0, this.host.progress.unlocked - first));
+      this.levelIndex = Math.min(LEVELS_PER_WORLD - 1, Math.max(0, lastSelectableLevel(this.host.progress) - first));
     }
   }
 
