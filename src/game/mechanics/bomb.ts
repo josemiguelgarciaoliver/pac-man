@@ -38,7 +38,7 @@ export class BombMechanic implements Mechanic {
     rng: Rng,
     avoid: TileXY[] = [],
   ) {
-    const sites = bombSites(lines);
+    const sites = bombSites(lines).filter((t) => def.area !== 'bottom' || t.row >= 15);
     const picked = pickSpread(lines, Math.min(def.count, sites.length), rng, sites, avoid);
     for (const t of picked) {
       const site = sites.find((s) => s.col === t.col && s.row === t.row)!;

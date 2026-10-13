@@ -15,7 +15,7 @@ type Belt = Extract<MechanicDef, { type: 'conveyor' }>;
 
 // ── Constructores breves de mecánicas ──
 const belts = (segments: number, extra: Partial<Belt> = {}): MechanicDef => ({ type: 'conveyor', segments, speed: 0.62, ghosts: false, chain: false, ...extra });
-const bombs = (count: number, fuseSeconds = 3, radius = 2): MechanicDef => ({ type: 'bomb', count, fuseSeconds, radius });
+const bombs = (count: number, fuseSeconds = 3, radius = 2, area: 'any' | 'bottom' = 'any'): MechanicDef => ({ type: 'bomb', count, fuseSeconds, radius, area });
 const saws = (count: number, speed = 0.6): MechanicDef => ({ type: 'sawblade', count, speed });
 const turrets = (count: number, periodSeconds = 5): MechanicDef => ({ type: 'turret', count, periodSeconds });
 const gates = (count: number, openSeconds = 6, closedSeconds = 4): MechanicDef => ({ type: 'gate', count, openSeconds, closedSeconds });
@@ -91,7 +91,7 @@ export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
   47: { mechanics: [phenomenon('wobble', 14, 8), mud(2)] },
   48: { mechanics: [spikes(4, 4), saws(1, 0.7)] },
   49: { mission: { type: 'RESCUE' }, mechanics: [gates(3)] },
-  50: { mechanics: [turrets(3, 5), bombs(2), spikes(2)] },
+  50: { mechanics: [turrets(3, 5), bombs(1, 3, 2, 'bottom'), spikes(2)] },
 
   // ── Mundo 6 — Fondo Marino: corrientes, medusas y remolinos ──
   51: { mechanics: [belts(4, { speed: 0.42, ghosts: true })] },

@@ -45,6 +45,8 @@ export const mechanicSchema = z.discriminatedUnion('type', [
     count: z.number().int().min(1).max(6),
     fuseSeconds: z.number().min(1.5).max(8).default(3),
     radius: z.number().int().min(1).max(3).default(2),
+    /** Dónde caen las bombas: en todo el laberinto o solo en su mitad de abajo. */
+    area: z.enum(['any', 'bottom']).default('any'),
   }),
   /** Sierras que patrullan un pasillo de punta a punta. */
   z.object({

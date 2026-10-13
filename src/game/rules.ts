@@ -111,8 +111,8 @@ export function getLevelRules(level: number, difficulty: Difficulty = 'arcade', 
   const d = DIFFICULTY_PRESETS[difficulty];
   const gMul = d.ghostSpeed + (1 - d.ghostSpeed) * fade;
   const pMul = d.pacSpeed + (1 - d.pacSpeed) * fade;
-  // Rebaja general de los fantasmas (10 % al empezar, 0 en el nivel 100 para que siga siendo casi imposible).
-  const ghostEase = 1 - 0.1 * (1 - p ** 3);
+  // Rebaja general de los fantasmas (20 % al empezar, 0 en el nivel 100 para que siga siendo casi imposible).
+  const ghostEase = 1 - 0.2 * (1 - p ** 3);
   const ghostSpeed = ghostBase * gMul * ghostEase;
   const pacSpeed = Math.min(1.2, pacBase * pMul);
 
