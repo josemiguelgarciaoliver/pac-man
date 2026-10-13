@@ -133,7 +133,8 @@ export function getLevelRules(level: number, difficulty: Difficulty = 'arcade', 
   ];
 
   // Cruise Elroy de Blinky: los presets sin él lo van recuperando poco a poco.
-  const elroy1 = Math.round(20 + 100 * p);
+  // Los saltos de velocidad llegan con menos puntos restantes (la mitad al principio, igual en el nivel 100): más tiempo entre uno y otro.
+  const elroy1 = Math.round((20 + 100 * p) * (0.5 + 0.5 * p));
   const elroyShare = d.elroy ? 1 : p;
 
   return {
