@@ -4,6 +4,9 @@ import { farthestFromSpawn, pickSpread, type TileXY } from './level/placement';
 import type { MissionDef } from './level/schema';
 import type { Rng } from './random';
 
+/** Distancia máxima (casillas) de la meta a la salida de Pac-Man. */
+export const REACH_MAX_TILES = 40;
+
 type CollectIcon = Extract<MissionDef, { type: 'COLLECT' }>['icon'];
 
 const LETTERS = ['P', 'A', 'C', '★'];
@@ -45,7 +48,8 @@ export class Mission {
         this.items = pickSpread(lines, def.count, rng).map((t, i) => ({ ...t, label: def.icon === 'letters' ? LETTERS[i % LETTERS.length] : '', taken: false }));
         break;
       case 'REACH':
-        this.goal = farthestFromSpawn(lines);
+        // La meta está siempre al alcance del límite de tiempo (10 s): a ≈40 casillas, unos 5 s corriendo.
+        this.goal = farthestFromSpawn(lines, REACH_MAX_TILES);
         break;
       case 'RESCUE': {
         const far = farthestFromSpawn(lines);

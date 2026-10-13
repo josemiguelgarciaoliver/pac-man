@@ -230,3 +230,21 @@ describe('rescate con el amigo a cuestas', () => {
     expect(clear.carrying).toBe(false);
   });
 });
+
+describe('misiones de llegar a la meta', () => {
+  it('siempre tienen 10 s y la meta queda a un trayecto que cabe en ese tiempo', async () => {
+    const { bfs } = await import('../src/game/level/placement');
+    const { PAC_SPAWN_TILE } = await import('../src/game/maze/generator');
+    const { REACH_MAX_TILES } = await import('../src/game/missions');
+    const reach = levels.filter((l) => l.mission.type === 'REACH');
+    expect(reach.length).toBeGreaterThan(0);
+    for (const l of reach) {
+      expect(l.mission.type === 'REACH' && l.mission.timeLimit, `nivel ${l.level}`).toBe(10);
+      const m = new Mission(l.mission, l.maze, createRng(l.level * 7919));
+      const goal = m.target(PAC_SPAWN_TILE)!;
+      const d = bfs(l.maze, PAC_SPAWN_TILE).dist[goal.row * 28 + goal.col];
+      expect(d, `nivel ${l.level}`).toBeGreaterThan(5);
+      expect(d, `nivel ${l.level}`).toBeLessThanOrEqual(REACH_MAX_TILES);
+    }
+  });
+});

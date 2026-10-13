@@ -122,12 +122,13 @@ export function pickSpread(lines: readonly string[], count: number, rng: Rng, al
   return chosen;
 }
 
-/** Casilla con punto más lejana de la salida de Pac-Man. */
-export function farthestFromSpawn(lines: readonly string[]): TileXY {
+/** Casilla con punto más lejana de la salida de Pac-Man (opcionalmente a no más de `maxDist` casillas). */
+export function farthestFromSpawn(lines: readonly string[], maxDist = Infinity): TileXY {
   const { dist } = bfs(lines, PAC_SPAWN_TILE);
   let best = -1;
   for (let k = 0; k < dist.length; k++) {
     if (lines[Math.floor(k / MAZE_COLS)][k % MAZE_COLS] !== '.') continue;
+    if (dist[k] > maxDist) continue;
     if (best === -1 || dist[k] > dist[best]) best = k;
   }
   return { col: best % MAZE_COLS, row: Math.floor(best / MAZE_COLS) };
