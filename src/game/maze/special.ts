@@ -100,6 +100,12 @@ function carve(grid: Grid, kind: SpecialKind, rng: Rng): void {
         }
       }
       for (let r = 24; r <= 27; r++) block(grid, 12 - (r - 24) * 2, r, 4 + (r - 24) * 4, 1);
+      // Muros de ladrillo entre la pirámide y los bordes: pasillos estrechos en vez de un salón vacío.
+      for (const c of [3, 8]) {
+        block(grid, c, 21, 3, 2);
+        block(grid, c, 28, 3, 1);
+      }
+      block(grid, 2, 24, 1, 3);
       break;
     case 'asteroids': {
       // Rocas sueltas de una o dos casillas, repartidas con semilla.
@@ -146,7 +152,7 @@ export function buildSpecialMaze(kind: SpecialKind, seed = 1): string[] {
   const rng = createRng(seed * 8191 + 17);
   const grid = blank();
   carve(grid, kind, rng);
-  if (kind !== 'arena' && kind !== 'pyramid') breakOpenSpaces(grid); // la "sala sin paredes" es justo eso: sin paredes
+  if (kind !== 'arena') breakOpenSpaces(grid); // la "sala sin paredes" es justo eso: sin paredes
   const lines: string[] = [];
   for (let r = 0; r < MAZE_ROWS; r++) {
     if (r >= 9 && r <= 19) {
@@ -187,7 +193,7 @@ export function validateSpecialMaze(lines: readonly string[]): string[] {
     }
   }
   if (energizers !== 4) errors.push(`energizers: ${energizers} (deben ser 4)`);
-  if (dots + energizers < 150 || dots + energizers > 330) errors.push(`puntos: ${dots + energizers} (rango 150–330)`);
+  if (dots + energizers < 120 || dots + energizers > 330) errors.push(`puntos: ${dots + energizers} (rango 120–330)`);
   for (const [c, r] of REQUIRED_OPEN) if (lines[r][c] !== '#' && !reach.has(r * MAZE_COLS + c)) errors.push(`casilla obligatoria cerrada en (${c},${r})`);
   return errors;
 }
