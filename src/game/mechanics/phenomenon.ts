@@ -1,7 +1,11 @@
-import { TICK_RATE } from '../constants';
+import { drawTextCentered } from '../../engine/font';
+import { MAZE_TOP, SCREEN_W, TICK_RATE } from '../constants';
 import type { MechanicDef } from '../level/schema';
 import { EFFECT_INFO, type EffectKind } from '../viewEffects';
 import type { Mechanic, MechanicEnv } from './mechanic';
+
+/** Ticks de aviso antes de que empiece el fenómeno. */
+const WARN_TICKS = 3 * TICK_RATE;
 
 type PhenomenonDef = Extract<MechanicDef, { type: 'phenomenon' }>;
 
@@ -41,5 +45,17 @@ export class PhenomenonMechanic implements Mechanic {
 
   draw(): void {
     /* sin dibujo propio: el efecto lo aplica la vista */
+  }
+
+  /** Aviso parpadeante en los últimos segundos: el fenómeno no viene de ningún objeto, así que se anuncia. */
+  drawOver(ctx: CanvasRenderingContext2D, frame: number): void {
+    if (this.ticks > WARN_TICKS || this.ticks > this.every) return;
+    const label = EFFECT_INFO[this.def.effect as EffectKind].label;
+    const y = MAZE_TOP + 4;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fillRect(0, y - 2, SCREEN_W, 12);
+    if (Math.floor(frame / 8) % 2 === 0) drawTextCentered(ctx, `${label} EN ${this.secondsToNext}`, SCREEN_W / 2, y, '#ffd24a');
+    ctx.restore();
   }
 }
