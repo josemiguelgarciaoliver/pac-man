@@ -977,6 +977,7 @@ export class Game {
     }
     this.lives--;
     this.levelLivesLost++;
+    this.mission.onPacDeath();
     this.globalMode = true;
     this.globalCounter = 0;
     this.elroyEnabled = false; // tras morir, Blinky no vuelve a acelerar en lo que queda de nivel: se reinicia como al empezar

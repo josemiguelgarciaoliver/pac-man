@@ -132,6 +132,12 @@ export class Mission {
     return this.items.filter((i) => !i.taken).map((i) => ({ col: i.col, row: i.row }));
   }
 
+  /** Pac-Man ha muerto: el amigo rescatado vuelve a la jaula (y Pac-Man recupera su velocidad). */
+  onPacDeath(): void {
+    if (this.captive) this.captive.freed = false;
+    this.trail = [];
+  }
+
   onGhostEaten(): void {
     this.huntCount++;
   }

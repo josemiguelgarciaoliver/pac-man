@@ -271,3 +271,19 @@ describe('células de energía que cambian de sitio', () => {
     expect(JSON.stringify(m.itemTiles)).toBe(before);
   });
 });
+
+describe('rescate y muerte de Pac-Man', () => {
+  it('si matan a Pac-Man con el amigo a cuestas, el amigo vuelve a la jaula', () => {
+    const def = buildLevel(28);
+    const m = new Mission(def.mission, def.maze, createRng(28 * 7919));
+    const cage = m.target({ col: 1, row: 1 })!;
+    m.update({ x: 0, y: 0, col: cage.col, row: cage.row });
+    expect(m.carrying).toBe(true);
+    m.onPacDeath();
+    expect(m.carrying).toBe(false);
+    // Reaparecer en la salida ya no completa el nivel: hay que volver a liberarlo.
+    const exit = { col: 13, row: 23 };
+    expect(m.isComplete({ ...exit, x: 0, y: 0 } as never, 100)).toBe(false);
+    expect(m.target({ col: 1, row: 1 })).toEqual(cage);
+  });
+});
