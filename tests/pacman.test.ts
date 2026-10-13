@@ -66,3 +66,29 @@ describe('cruceta virtual', () => {
     expect(directionFromOffset(2, 2, 6)).toBeNull();
   });
 });
+
+describe('supervelocidad', () => {
+  it('a más del doble de velocidad Pac-Man sigue frenando centrado contra las paredes', () => {
+    const { maze, pac } = setup();
+    const fast = (BASE_SPEED * 1 * 2.1) / TICK_RATE;
+    for (let i = 0; i < 400; i++) pac.move(maze, fast);
+    expect(pac.moving).toBe(false);
+    expect(pac.x).toBe(pac.col * 8 + 4);
+    expect(maze.isWalkable(pac.col, pac.row)).toBe(true);
+  });
+
+  it('a supervelocidad todavía puede girar en una esquina', () => {
+    const { maze, pac } = setup();
+    const fast = (BASE_SPEED * 2.1) / TICK_RATE;
+    for (let i = 0; i < 20; i++) pac.move(maze, fast);
+    pac.want = Dir.Up;
+    let turned = false;
+    for (let i = 0; i < 80 && !turned; i++) {
+      pac.move(maze, fast);
+      turned = pac.dir === Dir.Up;
+    }
+    expect(turned).toBe(true);
+    for (let i = 0; i < 40; i++) pac.move(maze, fast);
+    expect(maze.isWalkable(pac.col, pac.row)).toBe(true);
+  });
+});

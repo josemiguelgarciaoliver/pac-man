@@ -10,8 +10,8 @@ import type { Mechanic, MechanicEnv } from './mechanic';
 type PuddleDef = Extract<MechanicDef, { type: 'puddle' }>;
 
 /** Cuánto frena el barro a Pac-Man (multiplicador) y a los fantasmas (px/tick). */
-const PAC_FACTOR = 0.55;
-const GHOST_DELTA = -0.32;
+const PAC_FACTOR = 0.38;
+const GHOST_DELTA = -0.48;
 
 /** Charcos de barro (arenas movedizas, resina, baba…): frenan a todos los que los cruzan. */
 export class PuddleMechanic implements Mechanic {

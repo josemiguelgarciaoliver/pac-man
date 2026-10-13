@@ -14,7 +14,7 @@ export interface LevelSpecial {
 type Belt = Extract<MechanicDef, { type: 'conveyor' }>;
 
 // ── Constructores breves de mecánicas ──
-const belts = (segments: number, extra: Partial<Belt> = {}): MechanicDef => ({ type: 'conveyor', segments, speed: 0.4, ghosts: false, chain: false, ...extra });
+const belts = (segments: number, extra: Partial<Belt> = {}): MechanicDef => ({ type: 'conveyor', segments, speed: 0.62, ghosts: false, chain: false, ...extra });
 const bombs = (count: number, fuseSeconds = 3, radius = 2): MechanicDef => ({ type: 'bomb', count, fuseSeconds, radius });
 const saws = (count: number, speed = 0.6): MechanicDef => ({ type: 'sawblade', count, speed });
 const turrets = (count: number, periodSeconds = 5): MechanicDef => ({ type: 'turret', count, periodSeconds });
@@ -93,16 +93,16 @@ export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
   50: { mechanics: [turrets(3, 5), bombs(2), spikes(2)] },
 
   // ── Mundo 6 — Fondo Marino: corrientes, medusas y remolinos ──
-  51: { mechanics: [belts(4, { speed: 0.25, ghosts: true })] },
+  51: { mechanics: [belts(4, { speed: 0.42, ghosts: true })] },
   52: { mechanics: [mud(3), phenomenon('wobble', 18, 6)] },
   53: { mechanics: [saws(3, 0.5)] },
   54: { mechanics: [portals(2)] },
-  55: { mechanics: [gates(3, 5, 3), belts(3, { speed: 0.25 })] },
+  55: { mechanics: [gates(3, 5, 3), belts(3, { speed: 0.42 })] },
   56: { mechanics: [spikes(3, 5)] },
   57: { mechanics: [gates(4, 5, 4)] },
   58: { mission: { type: 'COLLECT', count: 6, icon: 'pearl', timeLimit: 120 }, mechanics: [portals(2)] },
-  59: { mechanics: [belts(5, { speed: 0.25, ghosts: true, reverseEvery: 10 }), portals(1)] },
-  60: { mechanics: [saws(3, 0.7), turrets(2, 5), belts(3, { speed: 0.25 })] },
+  59: { mechanics: [belts(5, { speed: 0.42, ghosts: true, reverseEvery: 10 }), portals(1)] },
+  60: { mechanics: [saws(3, 0.7), turrets(2, 5), belts(3, { speed: 0.42 })] },
 
   // ── Mundo 7 — Volcán: géiseres, derrumbes y torretas de fuego ──
   61: { mechanics: [spikes(5, 4)] },
@@ -142,7 +142,7 @@ export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
 
   // ── Mundo 10 — El Núcleo Glitch: todo mezclado y corrompido ──
   91: { mechanics: [shrooms(4, undefined, 9), portals(2)] },
-  92: { mechanics: [belts(5, { speed: 0.5, ghosts: true, reverseEvery: 6 }), spikes(3, 4)] },
+  92: { mechanics: [belts(5, { speed: 0.75, ghosts: true, reverseEvery: 6 }), spikes(3, 4)] },
   93: { mechanics: [turrets(3, 4), portals(1), phenomenon('dark', 18, 9)] },
   94: { mechanics: [phenomenon('mirror', 10, 8), shrooms(3, ['invert', 'scramble'], 9)] },
   95: { mission: { type: 'REACH', timeLimit: 60 }, mechanics: [phenomenon('rotate', 14, 8), gates(3)] },

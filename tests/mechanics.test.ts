@@ -354,7 +354,7 @@ describe('supervelocidad', () => {
     s.place(tile.col, tile.row);
     s.run(1);
     expect(s.view.has('boost')).toBe(true);
-    expect(s.view.speedFactor).toBeGreaterThan(1.4);
+    expect(s.view.speedFactor).toBeGreaterThanOrEqual(2);
     expect(s.view.secondsLeft('boost')).toBe(60);
     expect(s.popups).toContain('SUPERVELOCIDAD');
     // Ya no está: pasar otra vez no vuelve a dar nada.
@@ -557,5 +557,47 @@ describe('blaster y disparos', () => {
     expect(levels.slice(0, 4)).toEqual([7, 12, 17, 22]);
     expect(levels).toContain(100);
     expect(levels).toHaveLength(20);
+  });
+});
+
+describe('ajustes de equilibrio', () => {
+  /** Pone a Pac-Man a `dist` px del centro de la bomba, en el sentido de su pared (o al contrario). */
+  const placeAt = (s: ReturnType<typeof setup>, site: { col: number; row: number; dc: number; dr: number }, dist: number, away = false) => {
+    const k = away ? -1 : 1;
+    s.pac.x = cx(site.col) + k * site.dc * dist;
+    s.pac.y = cx(site.row) + k * site.dr * dist;
+  };
+
+  it('la onda de la bomba mata a Pac-Man aunque esté fuera del rombo de paredes derribadas, pero no lejos', () => {
+    const near = setup(7);
+    const bomb = near.mechanics[0] as BombMechanic;
+    const site = bomb.sites[0];
+    expect(bomb.lethalRadius).toBeGreaterThan(3 * 8); // más que el radio de paredes (2 casillas)
+    near.place(site.col, site.row);
+    near.run(1); // se arma
+    placeAt(near, site, 3 * 8, true); // 3 casillas hacia el pasillo, fuera del rombo
+    let hit = false;
+    near.run(300, () => (hit ||= near.hits(), false));
+    expect(hit).toBe(true);
+
+    const far = setup(7);
+    const farBomb = far.mechanics[0] as BombMechanic;
+    const farSite = farBomb.sites[0];
+    far.place(farSite.col, farSite.row);
+    far.run(1);
+    placeAt(far, farSite, farBomb.lethalRadius + 6, true);
+    let farHit = false;
+    far.run(300, () => (farHit ||= far.hits(), false));
+    expect(farHit).toBe(false);
+  });
+
+  it('las cintas empujan con fuerza y el barro frena mucho', () => {
+    const belts = Array.from({ length: 100 }, (_, i) => buildLevel(i + 1).mechanics.filter((m) => m.type === 'conveyor')).flat();
+    expect(belts.length).toBeGreaterThan(5);
+    for (const b of belts) if (b.type === 'conveyor') expect(b.speed).toBeGreaterThanOrEqual(0.4);
+    const s = setup(6);
+    const mud = s.mechanics[0] as PuddleMechanic;
+    s.place(mud.tileList[0].col, mud.tileList[0].row);
+    expect(mud.pacSpeedFactor(s.pac)).toBeLessThanOrEqual(0.4);
   });
 });
