@@ -27,7 +27,6 @@ export interface MenuHost {
   setDifficulty(d: Difficulty): void;
   toggleMute(): void;
   setParticles(on: boolean): void;
-  setDevSkip(on: boolean): void;
   resetProgress(): void;
 }
 
@@ -174,7 +173,7 @@ export class Menus {
   }
 
   // ── Ajustes ──
-  private readonly settingLabels = ['DIFICULTAD', 'SONIDO', 'PARTICULAS', 'S SALTA NIVEL', 'BORRAR PROGRESO', 'VOLVER'];
+  private readonly settingLabels = ['DIFICULTAD', 'SONIDO', 'PARTICULAS', 'BORRAR PROGRESO', 'VOLVER'];
 
   private updateSettings(inp: MenuInput): void {
     const h = this.host;
@@ -199,9 +198,6 @@ export class Menus {
         h.setParticles(!h.settings.particles);
         break;
       case 3:
-        h.setDevSkip(!h.settings.devSkip);
-        break;
-      case 4:
         // Doble confirmación: la primera pulsación avisa, la segunda borra.
         if (this.confirmReset) {
           h.resetProgress();
@@ -210,7 +206,7 @@ export class Menus {
           this.confirmReset = true;
         }
         break;
-      case 5:
+      case 4:
         if (inp.confirm) this.screen = 'main';
         break;
     }
@@ -389,15 +385,14 @@ export class Menus {
   private drawSettings(ctx: CanvasRenderingContext2D): void {
     const h = this.host;
     this.drawHeader(ctx, 'AJUSTES');
-    const values = [`< ${DIFFICULTY_PRESETS[h.difficulty].label} >`, h.muted ? 'NO' : 'SI', h.settings.particles ? 'SI' : 'NO', h.settings.devSkip ? 'SI' : 'NO', this.confirmReset ? 'PULSA OTRA VEZ' : '', ''];
+    const values = [`< ${DIFFICULTY_PRESETS[h.difficulty].label} >`, h.muted ? 'NO' : 'SI', h.settings.particles ? 'SI' : 'NO', this.confirmReset ? 'PULSA OTRA VEZ' : '', ''];
     this.settingLabels.forEach((label, i) => {
       const on = i === this.settingsIndex;
       const y = 52 + i * 21;
       drawText(ctx, `${on ? '>' : ' '} ${label}`, 18, y, on ? (this.blink() ? COLORS.ready : COLORS.text) : DIM);
-      if (values[i]) drawTextRight(ctx, values[i], SCREEN_W - 16, y, i === 4 ? '#ff6f91' : COLORS.ready);
+      if (values[i]) drawTextRight(ctx, values[i], SCREEN_W - 16, y, i === 3 ? '#ff6f91' : COLORS.ready);
     });
     drawTextCentered(ctx, 'IZQUIERDA DERECHA CAMBIA', SCREEN_W / 2, 196, HINT);
-    drawTextCentered(ctx, 'S SALTA NIVEL: AYUDA PARA REVISAR', SCREEN_W / 2, 210, DIM);
     drawTextCentered(ctx, `RECORD  ${h.high}`, SCREEN_W / 2, 228, '#cfd8ff');
     this.drawBackHint(ctx);
   }

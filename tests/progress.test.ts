@@ -115,8 +115,8 @@ describe('persistencia', () => {
   it('los ajustes se guardan y tienen valores por defecto', () => {
     const store = memoryStore();
     expect(loadSettings(store)).toEqual(defaultSettings());
-    saveSettings({ particles: false, devSkip: false }, store);
-    expect(loadSettings(store)).toEqual({ particles: false, devSkip: false });
+    saveSettings({ particles: false }, store);
+    expect(loadSettings(store)).toEqual({ particles: false });
     store.setItem('pacman.settings', '{"particles": "nope"}');
     expect(loadSettings(store)).toEqual(defaultSettings());
   });

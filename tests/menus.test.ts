@@ -18,7 +18,6 @@ function makeHost(over: Partial<MenuHost> = {}) {
     setDifficulty: vi.fn((d: Difficulty) => void (host.difficulty = d)),
     toggleMute: vi.fn(() => void (host.muted = !host.muted)),
     setParticles: vi.fn((on: boolean) => void (host.settings = { ...host.settings, particles: on })),
-    setDevSkip: vi.fn((on: boolean) => void (host.settings = { ...host.settings, devSkip: on })),
     resetProgress: vi.fn(),
     ...over,
   } as MenuHost & { startAt: ReturnType<typeof vi.fn>; continueGame: ReturnType<typeof vi.fn>; resetProgress: ReturnType<typeof vi.fn> };
@@ -170,8 +169,6 @@ describe('ajustes y álbum', () => {
     expect(host.muted).toBe(true);
     press(m, 'down', 'ok');
     expect(host.settings.particles).toBe(false);
-    press(m, 'down', 'ok');
-    expect(host.settings.devSkip).toBe(false); // la tecla S vuelve a ser "abajo"
   });
 
   it('borrar el progreso exige confirmar dos veces', () => {
@@ -179,7 +176,7 @@ describe('ajustes y álbum', () => {
     const m = new Menus(host);
     m.reset();
     toSettings(m);
-    press(m, 'down', 'down', 'down', 'down', 'ok'); // "Borrar progreso": primera pulsación
+    press(m, 'down', 'down', 'down', 'ok'); // "Borrar progreso": primera pulsación
     expect(host.resetProgress).not.toHaveBeenCalled();
     press(m, 'ok');
     expect(host.resetProgress).toHaveBeenCalledTimes(1);
@@ -190,7 +187,7 @@ describe('ajustes y álbum', () => {
     const m = new Menus(host);
     m.reset();
     toSettings(m);
-    press(m, 'down', 'down', 'down', 'down', 'ok', 'up', 'down', 'ok');
+    press(m, 'down', 'down', 'down', 'ok', 'up', 'down', 'ok');
     expect(host.resetProgress).not.toHaveBeenCalled();
   });
 

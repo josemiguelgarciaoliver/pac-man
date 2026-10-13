@@ -11,13 +11,9 @@ const KEY_MAP: Record<string, Dir> = {
   KeyD: Dir.Right,
 };
 
-/**
- * Traduce una tecla en dirección o en "saltar nivel". Con la ayuda de desarrollo activada la tecla S
- * completa el nivel en lugar de mover hacia abajo (las flechas siguen funcionando).
- */
-export function interpretKey(code: string, skipKeyEnabled: boolean): { dir: Dir | null; skip: boolean } {
-  if (code === 'KeyS' && skipKeyEnabled) return { dir: null, skip: true };
-  return { dir: KEY_MAP[code] ?? null, skip: false };
+/** Traduce una tecla en dirección (flechas y WASD); null si no es de movimiento. */
+export function interpretKey(code: string): Dir | null {
+  return KEY_MAP[code] ?? null;
 }
 
 /** Dirección dominante de un desplazamiento (d-pad virtual); null dentro de la zona muerta. */
@@ -53,9 +49,6 @@ export class Input {
   private ainaRequested = false;
   private aleixRequested = false;
   private fireRequested = false;
-  private skipRequested = false;
-  /** Ayuda de desarrollo: S completa el nivel (la activa o desactiva el juego según los ajustes). */
-  skipKeyEnabled = true;
   private padFireDown = false;
   private padHeld: Dir | null = null;
   private padHeldTicks = 0;
@@ -66,12 +59,11 @@ export class Input {
 
   constructor(target: HTMLElement) {
     window.addEventListener('keydown', (e) => {
-      const key = interpretKey(e.code, this.skipKeyEnabled);
-      if (key.dir !== null) {
-        this.direction = key.dir;
+      const dir = interpretKey(e.code);
+      if (dir !== null) {
+        this.direction = dir;
         e.preventDefault();
       }
-      if (key.skip) this.skipRequested = true;
       if (e.code === 'Enter' || e.code === 'Space') this.pressed = true;
       if (e.code === 'KeyP' || e.code === 'Escape') this.pauseRequested = true;
       if (e.code === 'KeyM') this.muteRequested = true;
@@ -154,12 +146,6 @@ export class Input {
 
   requestFire(): void {
     this.fireRequested = true;
-  }
-
-  consumeSkip(): boolean {
-    const s = this.skipRequested;
-    this.skipRequested = false;
-    return s;
   }
 
   consumeFire(): boolean {

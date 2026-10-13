@@ -159,11 +159,9 @@ export function clearProgress(store: Store | null = defaultStore()): void {
 export interface Settings {
   /** Partículas ambientales de cada mundo. */
   particles: boolean;
-  /** Ayuda de desarrollo: la tecla S completa el nivel. */
-  devSkip: boolean;
 }
 
-export const defaultSettings = (): Settings => ({ particles: true, devSkip: true });
+export const defaultSettings = (): Settings => ({ particles: true });
 
 export function loadSettings(store: Store | null = defaultStore()): Settings {
   try {
@@ -171,7 +169,6 @@ export function loadSettings(store: Store | null = defaultStore()): Settings {
     const base = defaultSettings();
     return {
       particles: typeof v?.particles === 'boolean' ? v.particles : base.particles,
-      devSkip: typeof v?.devSkip === 'boolean' ? v.devSkip : base.devSkip,
     };
   } catch {
     return defaultSettings();

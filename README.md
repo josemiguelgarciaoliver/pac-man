@@ -43,5 +43,4 @@ temática familiar (Cely, Aina y Aleix). Pendientes: editor de laberintos, jefes
 
 Parámetros útiles: `/?autostart&level=28` empieza en un nivel concreto; `/?touch` fuerza el diseño táctil; `/?quick` salta la tarjeta de nivel; `/?menu=worlds|levels|album|settings` y `/?cutscene=<tick>` abren esas pantallas (pruebas). Teclas: `Z` Aina, `X` Aleix, `Espacio` disparar.
 
-**Ayuda para revisar niveles:** la tecla `S` da el nivel por completado (cuenta como una estrella y desbloquea el siguiente). Mientras está activa, `S` ya no mueve hacia abajo (usa la flecha); se desactiva en Ajustes → "S salta nivel".
 Regenerar los laberintos: `npm run generate:mazes`.
