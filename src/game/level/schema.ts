@@ -12,7 +12,7 @@ export const missionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('COLLECT'),
     count: z.number().int().min(1).max(10),
-    icon: z.enum(['letters', 'nut', 'glyph', 'pearl', 'cell', 'gem', 'shell']),
+    icon: z.enum(['letters', 'nut', 'glyph', 'pearl', 'cell', 'gem', 'shell', 'ember']),
     timeLimit: z.number().int().min(10).max(300).optional(),
   }),
   /** Llegar a un punto del mapa, a veces contra reloj. */
@@ -73,6 +73,16 @@ export const mechanicSchema = z.discriminatedUnion('type', [
     pairs: z.number().int().min(1).max(3),
     /** 'topBottom': cada pareja une la mitad de arriba del laberinto con la de abajo. */
     link: z.enum(['any', 'topBottom']).default('any'),
+  }),
+  /** Erupciones de lava al azar: el aviso muestra el área y la salpicadura mata a Pac-Man. */
+  z.object({
+    type: z.literal('lava'),
+    /** Erupciones simultáneas. */
+    count: z.number().int().min(1).max(3),
+    /** Segundos medios entre erupciones. */
+    everySeconds: z.number().min(4).max(30),
+    /** Radio de la salpicadura en casillas. */
+    splash: z.number().int().min(1).max(3).default(1),
   }),
   /** Medusas que patrullan un pasillo y paralizan un momento a Pac-Man si lo rozan. */
   z.object({

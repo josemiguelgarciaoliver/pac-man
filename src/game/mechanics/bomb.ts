@@ -82,19 +82,27 @@ export class BombMechanic implements Mechanic {
         if (b.ticks > 0 && b.ticks % TICK_RATE === 0) env.sfx('tick');
         if (b.ticks <= 0) this.explode(b, env);
       } else if (b.phase === 'boom') {
+        // La llamarada sigue ardiendo un rato: los fantasmas que se meten en ella también mueren.
+        for (const g of env.ghosts) if (this.deadly(g.state) && this.inBlast(b, g.x, g.y)) env.killGhost(g);
         if (--b.ticks <= 0) b.phase = 'done';
       }
     }
   }
 
+  private inBlast(b: Bomb, x: number, y: number): boolean {
+    return Math.hypot(x - centerX(b.site.col), y - centerY(b.site.row)) <= this.lethalRadius;
+  }
+
+  /** Estados en los que un fantasma puede morir por una bomba (asustados incluidos). */
+  private deadly(state: string): boolean {
+    return state === 'active' || state === 'leaving';
+  }
+
   private explode(b: Bomb, env: MechanicEnv): void {
     const blast = this.blastTiles(b);
     for (const t of blast) env.maze.destroyWall(t.col, t.row);
-    const cx = centerX(b.site.col);
-    const cy = centerY(b.site.row);
-    const lethal = (x: number, y: number) => Math.hypot(x - cx, y - cy) <= this.lethalRadius;
-    if (lethal(env.pac.x, env.pac.y)) this.hit = true;
-    for (const g of env.ghosts) if (g.state === 'active' && lethal(g.x, g.y)) env.killGhost(g);
+    if (this.inBlast(b, env.pac.x, env.pac.y)) this.hit = true;
+    for (const g of env.ghosts) if (this.deadly(g.state) && this.inBlast(b, g.x, g.y)) env.killGhost(g);
     b.phase = 'boom';
     b.ticks = BOOM_TICKS;
     env.sfx('explosion');

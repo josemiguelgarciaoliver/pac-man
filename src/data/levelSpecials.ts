@@ -28,6 +28,7 @@ const shrooms = (count: number, effects: EffectKind[] = ['wobble', 'invert', 'sc
   effectSeconds,
 });
 const phenomenon = (effect: EffectKind, everySeconds: number, durationSeconds: number): MechanicDef => ({ type: 'phenomenon', effect, everySeconds, durationSeconds });
+const lava = (everySeconds: number, count = 1, splash = 1): MechanicDef => ({ type: 'lava', count, everySeconds, splash });
 const jelly = (count = 1): MechanicDef => ({ type: 'jellyfish', count });
 const mud = (count: number): MechanicDef => ({ type: 'puddle', count });
 const companion = (who: 'aleix' | 'aina', count = 1): MechanicDef => ({ type: 'companion', who, count });
@@ -107,16 +108,16 @@ export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
   60: { mechanics: [saws(3, 0.7), turrets(2, 5), belts(3, { speed: 0.42 }), jelly(3)] },
 
   // ── Mundo 7 — Volcán: géiseres, derrumbes y torretas de fuego ──
-  61: { mechanics: [spikes(5, 4)] },
-  62: { mechanics: [bombs(3, 3)] },
-  63: { mechanics: [gates(3), spikes(3)] },
-  64: { mechanics: [turrets(3, 5)] },
-  65: { mission: { type: 'SURVIVE', seconds: 100 }, mechanics: [spikes(3, 4)] },
+  61: { mechanics: [spikes(5, 4), lava(14)] },
+  62: { mission: { type: 'HUNT', ghosts: 6 }, mechanics: [bombs(3, 3)] },
+  63: { mechanics: [gates(3), spikes(3), lava(11)] },
+  64: { mission: { type: 'COLLECT', count: 5, icon: 'ember', timeLimit: 140 }, mechanics: [turrets(3, 5), lava(12)] },
+  65: { mission: { type: 'SURVIVE', seconds: 100 }, mechanics: [spikes(3, 4), lava(9)] },
   66: { mechanics: [turrets(3, 5), phenomenon('dark', 20, 8)] },
-  67: { mission: { type: 'REACH', timeLimit: 70 }, mechanics: [spikes(3, 4)] },
-  68: { mechanics: [saws(4, 0.9)] },
+  67: { mission: { type: 'REACH', timeLimit: 70 }, mechanics: [spikes(3, 4), lava(9)] },
+  68: { mission: { type: 'COLLECT', count: 6, icon: 'ember', timeLimit: 150 }, mechanics: [saws(4, 0.9), lava(10)] },
   69: { mechanics: [turrets(3, 4), bombs(2, 3)] },
-  70: { mechanics: [spikes(5, 4), turrets(3, 4.5), saws(2, 0.8)] },
+  70: { mechanics: [spikes(5, 4), turrets(3, 4.5), saws(2, 0.8), lava(8, 2)] },
 
   // ── Mundo 8 — Estación Espacial: portales, láseres y giros de gravedad ──
   71: { mechanics: [mud(3), portals(1)] },

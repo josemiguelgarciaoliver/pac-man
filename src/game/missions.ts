@@ -158,6 +158,7 @@ export class Mission {
           cell: `RECOGE ${d.count} CELULAS`,
           gem: `RECOGE ${d.count} GEMAS`,
           shell: `RECOGE ${d.count} CONCHAS`,
+          ember: `RECOGE ${d.count} ASCUAS`,
         };
         return [what[d.icon], d.timeLimit ? `ANTES DE ${d.timeLimit} SEGUNDOS` : ''];
       }
@@ -330,6 +331,24 @@ function drawCollectible(ctx: CanvasRenderingContext2D, icon: CollectIcon, x: nu
         ctx.lineTo(dx * 1.1, -3.4);
       }
       ctx.stroke();
+      break;
+    }
+    case 'ember': {
+      // Ascua: rubí de fuego con un brillo naranja.
+      glow(ctx, '#ff7a1c');
+      const g = ctx.createRadialGradient(-1.2, -1.6, 0.4, 0, 0, 5);
+      g.addColorStop(0, '#fff0a0');
+      g.addColorStop(0.5, '#ff8a1e');
+      g.addColorStop(1, '#b3200c');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(0, -4.8);
+      ctx.lineTo(3.6, -0.6);
+      ctx.lineTo(2.2, 4);
+      ctx.lineTo(-2.2, 4);
+      ctx.lineTo(-3.6, -0.6);
+      ctx.closePath();
+      ctx.fill();
       break;
     }
     case 'pearl': {

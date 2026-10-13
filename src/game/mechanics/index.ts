@@ -9,6 +9,7 @@ import { CompanionMechanic } from './companion';
 import { ConveyorMechanic } from './conveyor';
 import { GateMechanic } from './gate';
 import { JellyfishMechanic } from './jellyfish';
+import { LavaMechanic } from './lava';
 import type { Mechanic } from './mechanic';
 import { MushroomMechanic } from './mushroom';
 import { PhenomenonMechanic } from './phenomenon';
@@ -55,6 +56,8 @@ export function createMechanics(defs: readonly MechanicDef[], lines: readonly st
         return new SpikesMechanic(def, lines, rng);
       case 'mushroom':
         return new MushroomMechanic(def, lines, rng, avoid);
+      case 'lava':
+        return new LavaMechanic(def, lines, rng);
       case 'jellyfish':
         return new JellyfishMechanic(def, lines, rng);
       case 'phenomenon':

@@ -852,3 +852,65 @@ describe('medusas del Fondo Marino', () => {
     expect(j.pacSpeedFactor(s.pac)).toBe(1);
   });
 });
+
+describe('lava del Volcán', () => {
+  const volcano = [61, 63, 64, 65, 67, 68, 70];
+  it('solo hay erupciones en algunos niveles del mundo 7', () => {
+    for (let n = 1; n <= 100; n++) expect(buildLevel(n).mechanics.some((m) => m.type === 'lava'), `nivel ${n}`).toBe(volcano.includes(n));
+  });
+
+  it('avisa antes de la erupción y solo mata durante ella, dentro de la salpicadura', () => {
+    const s = setup(65);
+    const lava = s.mechanics.find((m) => m.kind === 'lava') as unknown as { active: { tile: { col: number; row: number }; phase: string }[]; splashRadius: number };
+    s.place(ORIGINAL_PAC_SPAWN.col, ORIGINAL_PAC_SPAWN.row);
+    const first = s.run(5000, () => lava.active.length > 0);
+    expect(first).toBeGreaterThan(60); // no empieza de golpe
+    const v = lava.active[0];
+    expect(v.phase).toBe('warn');
+    // Aviso: aunque Pac-Man esté encima, todavía no mata.
+    s.place(v.tile.col, v.tile.row);
+    expect(s.hits()).toBe(false);
+    s.run(1000, () => lava.active[0]?.phase === 'erupt');
+    expect(s.hits()).toBe(true);
+    // Lejos de la salpicadura no pasa nada.
+    s.place(ORIGINAL_PAC_SPAWN.col, ORIGINAL_PAC_SPAWN.row);
+    expect(s.hits()).toBe(false);
+  });
+
+  it('el aviso nunca cae cerca de Pac-Man', () => {
+    const s = setup(70);
+    const lava = s.mechanics.find((m) => m.kind === 'lava') as unknown as { active: { tile: { col: number; row: number }; phase: string }[] };
+    s.place(ORIGINAL_PAC_SPAWN.col, ORIGINAL_PAC_SPAWN.row);
+    for (let i = 0; i < 20; i++) {
+      s.run(5000, () => lava.active.some((v) => v.phase === 'warn'));
+      for (const v of lava.active) expect(Math.abs(v.tile.col - s.pac.col) + Math.abs(v.tile.row - s.pac.row)).toBeGreaterThanOrEqual(5);
+      s.run(400, () => lava.active.length === 0);
+    }
+  });
+});
+
+describe('bombas contra fantasmas', () => {
+  it('matan a los fantasmas del radio al explotar y a los que entran en la llamarada', () => {
+    const s = setup(62);
+    const bomb = s.mechanics[0] as BombMechanic;
+    const site = bomb.sites[0];
+    const cx = site.col * 8 + 4;
+    const cy = site.row * 8 + 4;
+    s.ghosts[0].state = 'active';
+    s.ghosts[0].x = cx + 3;
+    s.ghosts[0].y = cy;
+    s.ghosts[1].state = 'active';
+    s.ghosts[1].x = cx + 200;
+    s.ghosts[1].y = cy;
+    s.place(site.col, site.row + 1);
+    s.run(1000, () => s.killed.length > 0);
+    expect(s.killed).toContain(s.ghosts[0]);
+    expect(s.killed).not.toContain(s.ghosts[1]);
+    // Otro fantasma entra en la llamarada mientras arde.
+    s.ghosts[2].state = 'active';
+    s.ghosts[2].x = cx - 4;
+    s.ghosts[2].y = cy;
+    s.run(5);
+    expect(s.killed).toContain(s.ghosts[2]);
+  });
+});

@@ -512,7 +512,7 @@ export class Game {
 
   /** Un peligro del nivel (bomba…) mata a un fantasma: se convierte en ojos y da puntos. */
   private killGhostByHazard(g: Ghost): void {
-    if (g.state !== 'active') return;
+    if (g.state !== 'active' && g.state !== 'leaving') return;
     g.state = 'eaten';
     g.frightened = false;
     this.addScore(200);
