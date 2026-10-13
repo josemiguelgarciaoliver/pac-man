@@ -51,8 +51,14 @@ function carve(grid: Grid, kind: SpecialKind, rng: Rng): void {
       }
       break;
     case 'hall':
-      // Sala hipóstila: columnas sueltas de 1×1 cada tres casillas.
-      for (const c of [3, 6, 9, 12]) for (const r of [3, 6, 22, 25, 28]) wall(grid, c, r);
+      // Sala hipóstila: columnas cada tres casillas; en tablero de ajedrez se alargan en muros de tres
+      // casillas, así los pasillos quedan más estrechos y hay menos puntos y más sitios donde esconderse.
+      [3, 6, 9, 12].forEach((c, i) =>
+        [3, 6, 22, 25, 28].forEach((r, j) => {
+          if ((i + j) % 2 === 0) block(grid, c - 1, r, 3, 1);
+          else block(grid, c, r - 1, 1, 3);
+        }),
+      );
       break;
     case 'throne':
       // Salón del trono: dos hileras de columnas con un gran pasillo central libre.
@@ -97,11 +103,38 @@ function carve(grid: Grid, kind: SpecialKind, rng: Rng): void {
   }
 }
 
+/** Lado máximo (en casillas) de una cavidad abierta: más grande que esto se rompe con postes. */
+const MAX_OPEN = 2;
+
+/**
+ * Rompe las cavidades abiertas demasiado grandes: mientras exista un cuadrado libre de
+ * (MAX_OPEN+1)² casillas, planta un poste (y su espejo) dentro. Un poste rodeado de casillas
+ * libres nunca corta el laberinto, y así hay menos puntos que recoger y más donde esconderse.
+ */
+function breakOpenSpaces(grid: Grid): void {
+  const n = MAX_OPEN + 1;
+  const open = (c: number, r: number) => !grid[r][c] && (r < 9 || r > 19);
+  for (let again = true; again; ) {
+    again = false;
+    for (let r = 1; r + n <= MAZE_ROWS - 1 && !again; r++) {
+      for (let c = 1; c + n <= MAZE_COLS - 1 && !again; c++) {
+        let free = true;
+        for (let dr = 0; dr < n && free; dr++) for (let dc = 0; dc < n && free; dc++) free = open(c + dc, r + dr);
+        if (!free) continue;
+        const before = grid[r + 1][c + 1];
+        wall(grid, c + 1, r + 1);
+        again = grid[r + 1][c + 1] !== before;
+      }
+    }
+  }
+}
+
 /** Construye el laberinto raro `kind` (determinista para la semilla dada). */
 export function buildSpecialMaze(kind: SpecialKind, seed = 1): string[] {
   const rng = createRng(seed * 8191 + 17);
   const grid = blank();
   carve(grid, kind, rng);
+  if (kind !== 'arena') breakOpenSpaces(grid); // la "sala sin paredes" es justo eso: sin paredes
   const lines: string[] = [];
   for (let r = 0; r < MAZE_ROWS; r++) {
     if (r >= 9 && r <= 19) {
