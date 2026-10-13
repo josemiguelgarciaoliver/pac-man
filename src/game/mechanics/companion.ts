@@ -94,7 +94,7 @@ export class CompanionMechanic implements Mechanic {
   private summon(env: MechanicEnv): void {
     // Aparece junto a Pac-Man; si ya había una, se renueva el tiempo.
     this.helper = { x: env.pac.x, y: env.pac.y, ticks: Math.round(this.seconds * TICK_RATE), path: [], replan: 0, dx: 1, dy: 0 };
-    env.sfx('summon');
+    env.sfx(this.who);
     env.popup(`${FAMILY[this.who].name} AYUDA`, env.pac.x, env.pac.y - 10);
   }
 

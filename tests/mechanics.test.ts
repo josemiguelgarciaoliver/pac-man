@@ -34,6 +34,7 @@ function setup(level: number) {
   const ghosts = ['blinky', 'pinky', 'inky', 'clyde'].map((n) => new Ghost(n as 'blinky'));
   const killed: Ghost[] = [];
   const popups: string[] = [];
+  const sounds: string[] = [];
   const view = new ViewEffects();
   const env: MechanicEnv = {
     maze,
@@ -45,7 +46,7 @@ function setup(level: number) {
       killed.push(g);
       g.state = 'eaten';
     },
-    sfx: () => {},
+    sfx: (k) => void sounds.push(k),
     popup: (t) => popups.push(t),
   };
   const mechanics = createMechanics(def.mechanics, def.maze, createRng(def.level * 104729 + 1));
@@ -61,7 +62,7 @@ function setup(level: number) {
     return -1;
   };
   const hits = () => mechanics.some((m) => m.hitsPac?.(pac));
-  return { def, maze, pac, ghosts, killed, popups, view, env, mechanics, place, run, hits };
+  return { def, maze, pac, ghosts, killed, popups, sounds, view, env, mechanics, place, run, hits };
 }
 
 describe('laberinto mutable', () => {
@@ -620,5 +621,75 @@ describe('efectos de vista al terminar el nivel', () => {
     // Y no se reactiva solo en los ticks siguientes.
     for (let i = 0; i < 30; i++) v.update();
     expect(v.darkAmount).toBe(0);
+  });
+});
+
+describe('sonidos al coger los objetos', () => {
+  const pickup = (level: number, type: string, who?: string) => {
+    const s = setup(level);
+    const idx = buildLevel(level).mechanics.findIndex((m) => m.type === type && (!who || (m.type === 'companion' && m.who === who)));
+    expect(idx, `${type} en el nivel ${level}`).toBeGreaterThanOrEqual(0);
+    const mech = s.mechanics[idx] as unknown as { tiles?: { col: number; row: number }[]; portals?: { col: number; row: number }[] };
+    const tile = (mech.tiles ?? mech.portals)![0];
+    s.ghosts.forEach((g) => (g.state = 'active'));
+    s.place(tile.col, tile.row);
+    s.run(1);
+    return s.sounds;
+  };
+
+  it('cada objeto suena distinto al cogerlo', () => {
+    const heard = {
+      zapatillas: pickup(4, 'boost'),
+      pistola: pickup(7, 'blaster'),
+      aleix: pickup(6, 'companion', 'aleix'),
+      aina: pickup(11, 'companion', 'aina'),
+      furia: pickup(16, 'rage'),
+      seta: pickup(15, 'mushroom'),
+      portal: pickup(12, 'teleport'),
+    };
+    expect(heard.zapatillas).toContain('boost');
+    expect(heard.pistola).toContain('gun');
+    expect(heard.aleix).toContain('aleix');
+    expect(heard.aina).toContain('aina');
+    expect(heard.furia).toContain('rage');
+    expect(heard.seta).toContain('poison');
+    expect(heard.portal).toContain('teleport');
+    const kinds = new Set(Object.values(heard).map((h) => h[0]));
+    expect(kinds.size).toBe(Object.keys(heard).length); // ninguno se repite
+  });
+});
+
+describe('envenenamiento (Pac-Man verde)', () => {
+  it('los efectos negativos envenenan; los positivos no', () => {
+    for (const bad of ['wobble', 'invert', 'scramble', 'rotate', 'mirror', 'dark'] as const) {
+      const v = new ViewEffects();
+      expect(v.poisoned).toBe(false);
+      v.add(bad, 5);
+      expect(v.poisoned, bad).toBe(true);
+    }
+    for (const good of ['turbo', 'boost', 'gun'] as const) {
+      const v = new ViewEffects();
+      v.add(good, 5);
+      expect(v.poisoned, good).toBe(false);
+    }
+  });
+
+  it('el veneno se acaba con el efecto y al completar el nivel', () => {
+    const v = new ViewEffects();
+    v.add('invert', 1);
+    expect(v.poisoned).toBe(true);
+    for (let i = 0; i < 70; i++) v.update();
+    expect(v.poisoned).toBe(false);
+    v.add('mirror', 20);
+    v.clear();
+    expect(v.poisoned).toBe(false);
+  });
+
+  it('comer una seta con efecto negativo envenena a Pac-Man', () => {
+    const s = setup(17); // setas con visión borrosa o mando al revés: los dos son negativos
+    const m = s.mechanics.find((x) => x instanceof MushroomMechanic) as MushroomMechanic;
+    s.place(m.tiles[0].col, m.tiles[0].row);
+    s.run(1);
+    expect(s.view.poisoned).toBe(true);
   });
 });

@@ -75,7 +75,10 @@ class FakeAudio {
   muted = false;
   play() {}
   waka() {}
-  sfx() {}
+  log: string[] = [];
+  sfx(kind: string) {
+    this.log.push(kind);
+  }
   setAmbient() {}
   suspend() {}
   resume() {}
@@ -104,8 +107,9 @@ function newGame(level: number, storage: unknown = { getItem: () => null, setIte
   (globalThis as unknown as { location: unknown }).location = { search: autostart ? `?autostart&level=${level}` : '' };
   (globalThis as unknown as { localStorage: unknown }).localStorage = storage;
   const input = new FakeInput();
-  const game = new Game(input as never, new FakeAudio() as never);
-  return { game, input, probe: game as unknown as Probe };
+  const audio = new FakeAudio();
+  const game = new Game(input as never, audio as never);
+  return { game, input, audio, probe: game as unknown as Probe };
 }
 
 const DIRS = [Dir.Up, Dir.Left, Dir.Down, Dir.Right];
@@ -280,6 +284,26 @@ describe('progresión en el juego (Fase 6)', () => {
     }
     expect(after).toBeLessThan(60 * 3); // saltó la tarjeta y solo quedaba el READY
     void input;
+  });
+
+  it('recoger un objeto de misión y liberar al amigo suenan', () => {
+    const collect = newGame(5, memoryStorage());
+    untilPlay(collect.game, collect.probe);
+    const c = collect.game as unknown as { mission: { target(f: { col: number; row: number }): { col: number; row: number } | null }; pac: { x: number; y: number } };
+    const item = c.mission.target({ col: 13, row: 23 })!;
+    c.pac.x = item.col * 8 + 4;
+    c.pac.y = item.row * 8 + 4;
+    collect.game.update();
+    expect(collect.audio.log).toContain('collect');
+
+    const rescue = newGame(28, memoryStorage());
+    untilPlay(rescue.game, rescue.probe);
+    const r = rescue.game as unknown as { mission: { target(f: { col: number; row: number }): { col: number; row: number } | null }; pac: { x: number; y: number } };
+    const captive = r.mission.target({ col: 13, row: 23 })!;
+    r.pac.x = captive.col * 8 + 4;
+    r.pac.y = captive.row * 8 + 4;
+    rescue.game.update();
+    expect(rescue.audio.log).toContain('rescue');
   });
 
   it('perder una vida en el nivel deja solo una estrella', () => {

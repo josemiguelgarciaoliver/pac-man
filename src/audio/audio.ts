@@ -1,6 +1,6 @@
 export type SoundName = 'start' | 'waka' | 'eat_fruit' | 'eat_ghost' | 'extra_life' | 'intermission' | 'death';
 /** Efectos sintetizados de las mecánicas de nivel. */
-export type SfxKind = 'explosion' | 'zap' | 'teleport' | 'tick' | 'gate' | 'spike' | 'poison' | 'boost' | 'rage' | 'summon' | 'shoot';
+export type SfxKind = 'explosion' | 'zap' | 'teleport' | 'tick' | 'gate' | 'spike' | 'poison' | 'boost' | 'rage' | 'summon' | 'shoot' | 'gun' | 'aleix' | 'aina' | 'collect' | 'rescue' | 'hint' | 'decoy';
 export type AmbientKind = 'siren' | 'power' | 'eyes';
 
 const FILES: SoundName[] = ['start', 'waka', 'eat_fruit', 'eat_ghost', 'extra_life', 'intermission', 'death'];
@@ -176,6 +176,40 @@ export class AudioManager {
         break;
       case 'spike':
         burst(0.1, 0.28, 3200, 1200);
+        break;
+      case 'gun':
+        // Pistola: clic metálico de montar el arma y una carga que sube.
+        burst(0.05, 0.3, 5000, 2500);
+        tone('square', 180, 180, 0.04, 0.12, 0.05);
+        tone('sawtooth', 320, 1100, 0.26, 0.12, 0.1);
+        break;
+      case 'aleix':
+        // Aleix: juguetón, como un "bip-bop" rápido.
+        tone('square', 700, 1050, 0.09, 0.12);
+        tone('square', 1050, 700, 0.09, 0.12, 0.09);
+        tone('square', 700, 1400, 0.14, 0.12, 0.18);
+        break;
+      case 'aina':
+        // Aina: dos campanitas suaves.
+        tone('sine', 988, 988, 0.22, 0.16);
+        tone('sine', 1319, 1319, 0.3, 0.16, 0.12);
+        tone('sine', 1976, 1976, 0.25, 0.07, 0.12);
+        break;
+      case 'collect':
+        tone('sine', 880, 1320, 0.1, 0.16);
+        tone('sine', 1320, 1760, 0.14, 0.14, 0.09);
+        break;
+      case 'rescue':
+        for (const [k, f] of [523, 659, 784, 1047].entries()) tone('triangle', f, f, 0.16, 0.16, k * 0.1);
+        tone('sine', 1568, 1568, 0.4, 0.1, 0.4);
+        break;
+      case 'hint':
+        tone('sine', 600, 1500, 0.28, 0.14);
+        tone('sine', 900, 2100, 0.2, 0.06, 0.05);
+        break;
+      case 'decoy':
+        tone('triangle', 420, 180, 0.2, 0.2);
+        tone('triangle', 620, 300, 0.16, 0.12, 0.18);
         break;
       case 'shoot':
         tone('sawtooth', 1500, 240, 0.14, 0.14);

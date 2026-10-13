@@ -19,6 +19,9 @@ export const EFFECT_INFO: Record<EffectKind, { label: string; color: string }> =
 };
 
 /** Efectos que pueden salir de una seta o de un fenómeno (la supervelocidad es un objeto aparte). */
+/** Efectos que perjudican a Pac-Man: mientras duran, se le tiñe de verde (envenenado). */
+export const NEGATIVE_EFFECTS: readonly EffectKind[] = ['wobble', 'invert', 'scramble', 'rotate', 'mirror', 'dark'];
+
 export const ALL_EFFECTS: EffectKind[] = ['wobble', 'invert', 'scramble', 'rotate', 'mirror', 'dark', 'turbo'];
 
 /** Giro de 90° en sentido horario / antihorario (el orden de Dir es antihorario: arriba, izquierda, abajo, derecha). */
@@ -51,6 +54,11 @@ export class ViewEffects {
 
   has(kind: EffectKind): boolean {
     return (this.left.get(kind) ?? 0) > 0;
+  }
+
+  /** ¿Sufre Pac-Man algún efecto negativo? (se dibuja de verde) */
+  get poisoned(): boolean {
+    return NEGATIVE_EFFECTS.some((k) => this.has(k));
   }
 
   secondsLeft(kind: EffectKind): number {

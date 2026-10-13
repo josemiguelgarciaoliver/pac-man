@@ -44,13 +44,22 @@ const FACING: Record<Dir, number> = {
 
 const PAC_R = 7;
 
-function pacShape(ctx: CanvasRenderingContext2D, x: number, y: number, facing: number, mouth: number): void {
+export type PacPalette = 'yellow' | 'green';
+
+const PAC_COLORS: Record<PacPalette, [string, string, string]> = {
+  yellow: ['#fffbb0', '#ffee22', '#e8a800'],
+  // Envenenado: verde enfermizo.
+  green: ['#e6ffb8', '#74e03a', '#2b8f1f'],
+};
+
+function pacShape(ctx: CanvasRenderingContext2D, x: number, y: number, facing: number, mouth: number, palette: PacPalette = 'yellow'): void {
   ctx.save();
   ctx.translate(x, y);
+  const [c0, c1, c2] = PAC_COLORS[palette];
   const g = ctx.createRadialGradient(-2.4, -2.6, 0.6, 0, 0, PAC_R * 1.1);
-  g.addColorStop(0, '#fffbb0');
-  g.addColorStop(0.35, '#ffee22');
-  g.addColorStop(1, '#e8a800');
+  g.addColorStop(0, c0);
+  g.addColorStop(0.35, c1);
+  g.addColorStop(1, c2);
   ctx.fillStyle = g;
   ctx.beginPath();
   if (mouth <= 0.03) {
@@ -65,16 +74,16 @@ function pacShape(ctx: CanvasRenderingContext2D, x: number, y: number, facing: n
 }
 
 /** `anim` avanza 1 por tick mientras Pac-Man se mueve; la boca abre y cierra suavemente. */
-export function drawPac(ctx: CanvasRenderingContext2D, x: number, y: number, dir: Dir, anim: number): void {
+export function drawPac(ctx: CanvasRenderingContext2D, x: number, y: number, dir: Dir, anim: number, palette: PacPalette = 'yellow'): void {
   const phase = (anim % 8) / 8;
   const mouth = 0.04 + 0.78 * (0.5 - 0.5 * Math.cos(phase * TAU));
-  pacShape(ctx, x, y, FACING[dir], mouth);
+  pacShape(ctx, x, y, FACING[dir], mouth, palette);
 }
 
 /** progress 0..1: la boca se abre hasta consumir a Pac-Man y estalla en destellos. */
-export function drawPacDeath(ctx: CanvasRenderingContext2D, x: number, y: number, progress: number): void {
+export function drawPacDeath(ctx: CanvasRenderingContext2D, x: number, y: number, progress: number, palette: PacPalette = 'yellow'): void {
   if (progress < 0.85) {
-    pacShape(ctx, x, y, FACING[Dir.Up], 0.1 + (progress / 0.85) * (Math.PI - 0.1));
+    pacShape(ctx, x, y, FACING[Dir.Up], 0.1 + (progress / 0.85) * (Math.PI - 0.1), palette);
     return;
   }
   const t = (progress - 0.85) / 0.15;
@@ -348,5 +357,58 @@ export function drawFruit(ctx: CanvasRenderingContext2D, kind: FruitKind, x: num
       break;
     }
   }
+  ctx.restore();
+}
+
+// ───────────────────────── Pistola ─────────────────────────
+
+/**
+ * Pistola de rayos apuntando hacia `dir`, con el origen cerca de la empuñadura (el cañón sale hacia
+ * delante). `recoil` (0–1) la echa hacia atrás tras un disparo. La usan el objeto del laberinto y el
+ * arma que lleva Pac-Man mientras dura el efecto.
+ */
+export function drawPistol(ctx: CanvasRenderingContext2D, x: number, y: number, dir: Dir, recoil = 0): void {
+  ctx.save();
+  ctx.translate(x, y);
+  if (dir === Dir.Left) ctx.scale(-1, 1);
+  else if (dir === Dir.Up) ctx.rotate(-Math.PI / 2);
+  else if (dir === Dir.Down) ctx.rotate(Math.PI / 2);
+  ctx.translate(-recoil * 1.8, 0);
+
+  // Empuñadura de madera, algo inclinada.
+  ctx.fillStyle = '#7a4b2b';
+  ctx.beginPath();
+  ctx.moveTo(-4.4, 0.4);
+  ctx.lineTo(-1.2, 0.4);
+  ctx.lineTo(-1.8, 5);
+  ctx.lineTo(-4.8, 5);
+  ctx.closePath();
+  ctx.fill();
+  // Cuerpo metálico.
+  const g = ctx.createLinearGradient(0, -3, 0, 1.4);
+  g.addColorStop(0, '#f4f6ff');
+  g.addColorStop(0.5, '#aeb5cc');
+  g.addColorStop(1, '#6c738c');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.roundRect(-5, -2.8, 8.6, 3.8, 1);
+  ctx.fill();
+  // Cañón largo y punta naranja.
+  ctx.fillStyle = '#3a3f55';
+  ctx.beginPath();
+  ctx.roundRect(3.2, -2.3, 6, 2.3, 0.6);
+  ctx.fill();
+  ctx.fillStyle = '#ff7a45';
+  ctx.fillRect(9, -2.1, 1, 1.9);
+  // Tambor y guardamonte.
+  ctx.fillStyle = '#c9cfe2';
+  ctx.beginPath();
+  ctx.arc(-0.6, -1.2, 1.3, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = '#6c738c';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.arc(-0.2, 1.1, 1.8, 0.2, Math.PI - 0.2);
+  ctx.stroke();
   ctx.restore();
 }

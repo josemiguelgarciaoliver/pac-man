@@ -8,7 +8,7 @@ import type { Input } from '../input/input';
 import { HOUSE_DOOR_TILE, SCATTER_TARGETS, chaseTarget, type GhostName, type Tile } from './actors/ai';
 import { Ghost, type MoveEnv } from './actors/ghost';
 import { PacMan } from './actors/pacman';
-import { BASE_SPEED, COLORS, Dir, MAZE_TOP, SCREEN_H, SCREEN_W, TICK_RATE, TILE } from './constants';
+import { BASE_SPEED, COLORS, DIRS, Dir, MAZE_TOP, SCREEN_H, SCREEN_W, TICK_RATE, TILE } from './constants';
 import { CHECKPOINT_MIN_LIVES, clearCheckpoint, isCheckpointLevel, loadCheckpoint, saveCheckpoint, type Checkpoint } from './checkpoint';
 import { CUTSCENE_SKIP_AFTER, CUTSCENE_TICKS, drawCutscene } from './cutscene';
 import { FamilyHelpers } from './familyHelpers';
@@ -29,7 +29,7 @@ import { clearProgress, emptyProgress, loadProgress, loadSettings, parSeconds, r
 import { Projectiles } from './projectiles';
 import { createRng, type Rng } from './random';
 import { DIFFICULTY_PRESETS, FRUIT_POINTS, GHOST_POINTS, GLOBAL_RELEASE, fruitForLevel, getLevelRules, type Difficulty, type LevelRules } from './rules';
-import { drawFruit, drawGhost, drawPac, drawPacDeath, type GhostLook } from './sprites';
+import { drawFruit, drawGhost, drawPac, drawPacDeath, drawPistol, type GhostLook } from './sprites';
 import { EFFECT_INFO, ViewEffects } from './viewEffects';
 
 type State = 'title' | 'cutscene' | 'ready' | 'play' | 'ghostEaten' | 'dying' | 'clear' | 'gameover' | 'victory' | 'paused';
@@ -111,6 +111,8 @@ export class Game {
   private seenDirectionSeq = 0;
   /** Últimas posiciones de Pac-Man (para la estela de la supervelocidad). */
   private pacTrail: { x: number; y: number }[] = [];
+  /** Retroceso de la pistola tras un disparo (ticks). */
+  private gunRecoil = 0;
   private pac = new PacMan(ORIGINAL_PAC_SPAWN.x, ORIGINAL_PAC_SPAWN.y);
   private ghosts = GHOST_NAMES.map((n) => new Ghost(n));
   private rng: Rng = createRng(Date.now());
@@ -226,7 +228,10 @@ export class Game {
         }
         if (ainaRequested) this.useAina();
         if (aleixRequested) this.useAleix();
-        if (fireRequested && this.view.has('gun') && this.projectiles.tryFire(this.pac.x, this.pac.y, this.pac.dir)) this.audio.sfx('shoot');
+        if (fireRequested && this.view.has('gun') && this.projectiles.tryFire(this.pac.x, this.pac.y, this.pac.dir)) {
+          this.audio.sfx('shoot');
+          this.gunRecoil = 6;
+        }
         this.updatePlay();
         break;
       case 'ghostEaten':
@@ -622,6 +627,7 @@ export class Game {
       if (this.input.direction !== null) this.pac.want = this.view.mapInput(this.input.direction);
     }
     this.view.update();
+    if (this.gunRecoil > 0) this.gunRecoil--;
     this.pacTrail.push({ x: this.pac.x, y: this.pac.y });
     if (this.pacTrail.length > 10) this.pacTrail.shift();
 
@@ -640,7 +646,9 @@ export class Game {
       this.killPac();
       return;
     }
-    this.mission.update(this.pac);
+    const picked = this.mission.update(this.pac);
+    if (picked.item) this.audio.sfx('collect');
+    if (picked.freed) this.audio.sfx('rescue');
     if (this.mission.consumeEnergizerRespawn()) this.maze.respawnEnergizers();
 
     this.updateModes();
@@ -711,11 +719,11 @@ export class Game {
   }
 
   private useAina(): void {
-    this.helpers.useAina(this.levelDef.maze, { col: this.pac.col, row: this.pac.row }, this.objectiveTarget());
+    if (this.helpers.useAina(this.levelDef.maze, { col: this.pac.col, row: this.pac.row }, this.objectiveTarget())) this.audio.sfx('hint');
   }
 
   private useAleix(): void {
-    this.helpers.useAleix({ col: this.pac.col, row: this.pac.row });
+    if (this.helpers.useAleix({ col: this.pac.col, row: this.pac.row })) this.audio.sfx('decoy');
   }
 
   // ───────────────────────── Comer ─────────────────────────
@@ -930,6 +938,7 @@ export class Game {
     const hideGhosts = this.state === 'clear' || (this.state === 'dying' && this.timer >= DEATH_FREEZE);
     if (!hideGhosts) this.drawGhosts(ctx);
     this.drawPac(ctx);
+    this.drawPistolInHand(ctx);
     this.drawDarkness(ctx);
     ctx.restore();
     this.drawPopups(ctx);
@@ -962,9 +971,11 @@ export class Game {
   private drawPac(ctx: CanvasRenderingContext2D): void {
     if (this.state === 'ghostEaten') return;
     const y = MAZE_TOP + this.pac.y;
+    // Envenenado (efecto negativo de una seta): Pac-Man se tiñe de verde mientras dura.
+    const palette = this.view.poisoned ? 'green' : 'yellow';
     if (this.state === 'dying' && this.timer >= DEATH_FREEZE) {
       const progress = (this.timer - DEATH_FREEZE) / (DEATH_FRAMES * DEATH_FRAME_TICKS);
-      if (progress < 1) drawPacDeath(ctx, this.pac.x, y, progress);
+      if (progress < 1) drawPacDeath(ctx, this.pac.x, y, progress, palette);
       return;
     }
     const anim = this.pac.moving && this.state === 'play' ? this.pac.anim : 0;
@@ -975,17 +986,34 @@ export class Game {
         if (!p) continue;
         ctx.save();
         ctx.globalAlpha = alpha;
-        drawPac(ctx, p.x, MAZE_TOP + p.y, this.pac.dir, anim);
+        drawPac(ctx, p.x, MAZE_TOP + p.y, this.pac.dir, anim, palette);
         ctx.restore();
       }
       ctx.save();
       ctx.shadowColor = '#ffe94a';
       ctx.shadowBlur = ctx.getTransform().a * 5;
-      drawPac(ctx, this.pac.x, y, this.pac.dir, anim);
+      drawPac(ctx, this.pac.x, y, this.pac.dir, anim, palette);
       ctx.restore();
-      return;
+    } else {
+      drawPac(ctx, this.pac.x, y, this.pac.dir, anim, palette);
     }
-    drawPac(ctx, this.pac.x, y, this.pac.dir, anim);
+    if (this.view.poisoned) this.drawFumes(ctx, y);
+  }
+
+  /** Vapores verdes que suben de Pac-Man mientras está envenenado. */
+  private drawFumes(ctx: CanvasRenderingContext2D, y: number): void {
+    ctx.save();
+    ctx.shadowColor = '#7dff4a';
+    ctx.shadowBlur = ctx.getTransform().a * 2;
+    for (let i = 0; i < 4; i++) {
+      const life = ((this.frame * 0.04 + i * 0.25) % 1);
+      ctx.globalAlpha = (1 - life) * 0.8;
+      ctx.fillStyle = '#9cff6a';
+      ctx.beginPath();
+      ctx.arc(this.pac.x + Math.sin(this.frame / 9 + i * 2) * 3.5, y - 6 - life * 9, 1.6 - life * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   /** Efecto "oscuridad": solo se ve un círculo alrededor de Pac-Man. */
@@ -1004,6 +1032,15 @@ export class Game {
   /** Intensidad de la visión borrosa (0–1) para el postproceso del lienzo. */
   get wobbleAmount(): number {
     return this.view.wobbleAmount;
+  }
+
+  /** Mientras dura el efecto de disparo, Pac-Man lleva la pistola apuntando hacia donde mira. */
+  private drawPistolInHand(ctx: CanvasRenderingContext2D): void {
+    if (!this.view.has('gun') || (this.state !== 'play' && this.state !== 'paused')) return;
+    // En los últimos 3 segundos parpadea para avisar de que se acaba.
+    if (this.view.secondsLeft('gun') <= 3 && Math.floor(this.frame / 6) % 2 === 0) return;
+    const d = DIRS[this.pac.dir];
+    drawPistol(ctx, this.pac.x + d.x * 7, MAZE_TOP + this.pac.y + d.y * 7 + 1, this.pac.dir, this.gunRecoil / 6);
   }
 
   private drawPopups(ctx: CanvasRenderingContext2D): void {

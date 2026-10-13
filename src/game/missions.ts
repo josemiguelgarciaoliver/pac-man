@@ -60,17 +60,25 @@ export class Mission {
 
   // ───────────────────────── Estado ─────────────────────────
 
-  /** Una vez por tick de juego. */
-  update(pac: { x: number; y: number; col: number; row: number }): void {
+  /** Una vez por tick de juego. Devuelve lo que ha ocurrido (para los sonidos). */
+  update(pac: { x: number; y: number; col: number; row: number }): { item: boolean; freed: boolean } {
+    const events = { item: false, freed: false };
     this.ticks++;
     this.trail.push({ x: pac.x, y: pac.y });
     if (this.trail.length > FOLLOW_LAG + 1) this.trail.shift();
     if (this.def.type === 'HUNT' && this.ticks % (HUNT_RESPAWN_SECONDS * TICK_RATE) === 0) this.respawnNeeded = true;
 
     for (const it of this.items) {
-      if (!it.taken && it.col === pac.col && it.row === pac.row) it.taken = true;
+      if (!it.taken && it.col === pac.col && it.row === pac.row) {
+        it.taken = true;
+        events.item = true;
+      }
     }
-    if (this.captive && !this.captive.freed && this.captive.col === pac.col && this.captive.row === pac.row) this.captive.freed = true;
+    if (this.captive && !this.captive.freed && this.captive.col === pac.col && this.captive.row === pac.row) {
+      this.captive.freed = true;
+      events.freed = true;
+    }
+    return events;
   }
 
   onGhostEaten(): void {
