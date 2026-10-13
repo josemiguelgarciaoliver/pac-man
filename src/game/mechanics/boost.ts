@@ -26,9 +26,9 @@ export class BoostMechanic implements Mechanic {
   private bolts: Bolt[] = [];
   private readonly seconds: number;
 
-  constructor(def: BoostDef, lines: readonly string[], rng: Rng) {
+  constructor(def: BoostDef, lines: readonly string[], rng: Rng, avoid: TileXY[] = []) {
     this.seconds = def.seconds;
-    for (const tile of pickSpread(lines, def.count, rng)) this.bolts.push({ tile, regrow: 0 });
+    for (const tile of pickSpread(lines, def.count, rng, undefined, avoid)) this.bolts.push({ tile, regrow: 0 });
   }
 
   get tiles(): TileXY[] {
@@ -43,6 +43,8 @@ export class BoostMechanic implements Mechanic {
     const pac = env.pac;
     for (const b of this.bolts) {
       if (b.regrow > 0) {
+        // Si Pac-Man sigue encima cuando toca reaparecer, espera: no se recoge algo que no se ha visto aparecer.
+        if (b.regrow === 1 && b.tile.col === pac.col && b.tile.row === pac.row) continue;
         b.regrow--;
         continue;
       }

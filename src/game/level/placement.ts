@@ -98,7 +98,10 @@ export function dotTiles(lines: readonly string[]): TileXY[] {
  * Reparte `count` casillas lo más lejos posible unas de otras y de la salida de Pac-Man
  * (muestreo del punto más lejano; entre los mejores candidatos elige uno al azar).
  */
-export function pickSpread(lines: readonly string[], count: number, rng: Rng, candidates: TileXY[] = dotTiles(lines)): TileXY[] {
+export function pickSpread(lines: readonly string[], count: number, rng: Rng, allCandidates: TileXY[] = dotTiles(lines), avoid: readonly TileXY[] = []): TileXY[] {
+  // Nunca dos objetos en la misma casilla (ni pegados): se vería uno y se recogerían los dos.
+  const free = allCandidates.filter((t) => avoid.every((a) => Math.abs(a.col - t.col) + Math.abs(a.row - t.row) >= 2));
+  const candidates = free.length >= count ? free : allCandidates;
   const minDist = new Map<number, number>();
   const spawnDist = bfs(lines, PAC_SPAWN_TILE).dist;
   for (const t of candidates) minDist.set(key(t.col, t.row), spawnDist[key(t.col, t.row)]);

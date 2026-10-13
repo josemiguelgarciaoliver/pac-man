@@ -26,9 +26,9 @@ export class BlasterMechanic implements Mechanic {
   private pickups: Pickup[] = [];
   private readonly seconds: number;
 
-  constructor(def: BlasterDef, lines: readonly string[], rng: Rng) {
+  constructor(def: BlasterDef, lines: readonly string[], rng: Rng, avoid: TileXY[] = []) {
     this.seconds = def.seconds;
-    for (const tile of pickSpread(lines, def.count, rng)) this.pickups.push({ tile, regrow: 0 });
+    for (const tile of pickSpread(lines, def.count, rng, undefined, avoid)) this.pickups.push({ tile, regrow: 0 });
   }
 
   get tiles(): TileXY[] {
@@ -43,6 +43,8 @@ export class BlasterMechanic implements Mechanic {
     const pac = env.pac;
     for (const p of this.pickups) {
       if (p.regrow > 0) {
+        // Si Pac-Man sigue encima cuando toca reaparecer, espera: no se recoge algo que no se ha visto aparecer.
+        if (p.regrow === 1 && p.tile.col === pac.col && p.tile.row === pac.row) continue;
         p.regrow--;
         continue;
       }

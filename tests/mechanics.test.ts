@@ -793,3 +793,23 @@ describe('Anj del desierto', () => {
     expect(s.killed).toHaveLength(1); // el segundo fantasma no cae: el Anj ya se gastó
   });
 });
+
+describe('objetos sin solaparse', () => {
+  it('en ningún nivel dos objetos comparten casilla (se vería uno y se cogerían dos)', async () => {
+    const { Mission } = await import('../src/game/missions');
+    const { createRng } = await import('../src/game/random');
+    for (let n = 1; n <= 100; n++) {
+      const def = buildLevel(n);
+      const mission = new Mission(def.mission, def.maze, createRng(n * 7919));
+      const mechs = createMechanics(def.mechanics, def.maze, createRng(n * 104729 + 1), mission.occupied);
+      const all = [...mission.occupied];
+      for (const m of mechs) {
+        if (!['ankh','blaster','bomb','boost','companion','mushroom','rage','teleport'].includes(m.kind)) continue;
+        const own = m as unknown as { tiles?: { col: number; row: number }[]; portals?: { col: number; row: number }[]; sites?: { col: number; row: number }[] };
+        all.push(...(own.tiles ?? own.portals ?? own.sites ?? []));
+      }
+      const keys = all.map((t) => `${t.col},${t.row}`);
+      expect(new Set(keys).size, `nivel ${n}`).toBe(keys.length);
+    }
+  });
+});

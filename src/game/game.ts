@@ -478,7 +478,7 @@ export class Game {
     this.syncWalls();
     this.rules = getLevelRules(def.arcadeLevel, this.difficulty, def.level);
     this.mission = new Mission(def.mission, def.maze, createRng(def.level * 7919));
-    this.mechanics = createMechanics(def.mechanics, def.maze, createRng(def.level * 104729 + 1));
+    this.mechanics = createMechanics(def.mechanics, def.maze, createRng(def.level * 104729 + 1), this.mission.occupied);
     this.helpers.reset();
   }
 

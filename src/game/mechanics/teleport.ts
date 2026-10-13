@@ -25,9 +25,9 @@ export class TeleportMechanic implements Mechanic {
   /** Último portal usado, para dibujarle una onda. */
   private flash: { tile: TileXY; ticks: number }[] = [];
 
-  constructor(def: TeleportDef, lines: readonly string[], rng: Rng) {
+  constructor(def: TeleportDef, lines: readonly string[], rng: Rng, avoid: TileXY[] = []) {
     // Los portales se reparten lo más lejos posible entre sí; se emparejan los que quedan opuestos.
-    const spots = pickSpread(lines, def.pairs * 2, rng);
+    const spots = pickSpread(lines, def.pairs * 2, rng, undefined, avoid);
     for (let i = 0; i < def.pairs; i++) this.pairs.push({ a: spots[i], b: spots[spots.length - 1 - i], color: COLORS[i % COLORS.length] });
   }
 

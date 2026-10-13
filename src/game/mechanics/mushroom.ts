@@ -27,10 +27,10 @@ export class MushroomMechanic implements Mechanic {
   private readonly effects: EffectKind[];
   private readonly seconds: number;
 
-  constructor(def: MushroomDef, lines: readonly string[], rng: Rng) {
+  constructor(def: MushroomDef, lines: readonly string[], rng: Rng, avoid: TileXY[] = []) {
     this.effects = def.effects as EffectKind[];
     this.seconds = def.effectSeconds;
-    for (const tile of pickSpread(lines, def.count, rng)) this.shrooms.push({ tile, regrow: 0 });
+    for (const tile of pickSpread(lines, def.count, rng, undefined, avoid)) this.shrooms.push({ tile, regrow: 0 });
   }
 
   get tiles(): TileXY[] {
@@ -45,6 +45,8 @@ export class MushroomMechanic implements Mechanic {
     const pac = env.pac;
     for (const s of this.shrooms) {
       if (s.regrow > 0) {
+        // Si Pac-Man sigue encima cuando toca reaparecer, espera: no se recoge algo que no se ha visto aparecer.
+        if (s.regrow === 1 && s.tile.col === pac.col && s.tile.row === pac.row) continue;
         s.regrow--;
         continue;
       }

@@ -97,6 +97,14 @@ export class Mission {
   }
 
   /** ¿Lleva Pac-Man a un amigo rescatado que aún no ha puesto a salvo? Entonces va más lento. */
+  /** Casillas con objetos de la misión (para que ningún otro objeto caiga encima). */
+  get occupied(): TileXY[] {
+    const out: TileXY[] = this.items.map((i) => ({ col: i.col, row: i.row }));
+    if (this.goal) out.push({ col: this.goal.col, row: this.goal.row });
+    if (this.captive) out.push({ col: this.captive.col, row: this.captive.row });
+    return out;
+  }
+
   get carrying(): boolean {
     return this.def.type === 'RESCUE' && !!this.captive?.freed;
   }
@@ -276,16 +284,27 @@ function drawCollectible(ctx: CanvasRenderingContext2D, icon: CollectIcon, x: nu
       break;
     }
     case 'glyph': {
+      // Pergamino: hoja crema enrollada arriba y abajo, con renglones de jeroglíficos.
       glow(ctx, '#ffd24a');
-      ctx.strokeStyle = '#ffd24a';
-      ctx.lineWidth = 1.3;
+      ctx.fillStyle = '#f1e0ae';
+      ctx.fillRect(-3.2, -3.6, 6.4, 7.2);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#c9a24a';
+      for (const y of [-3.9, 3.9]) {
+        ctx.beginPath();
+        ctx.roundRect(-4.2, y - 1.1, 8.4, 2.2, 1.1);
+        ctx.fill();
+      }
+      ctx.strokeStyle = '#8a5a1c';
+      ctx.lineWidth = 0.7;
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.ellipse(0, -2.6, 1.9, 2.4, 0, 0, TAU);
-      ctx.moveTo(0, -0.2);
-      ctx.lineTo(0, 5);
-      ctx.moveTo(-3, 1.6);
-      ctx.lineTo(3, 1.6);
+      for (const y of [-1.8, -0.1, 1.6]) {
+        ctx.moveTo(-2, y);
+        ctx.lineTo(0.2, y);
+        ctx.moveTo(1.2, y);
+        ctx.lineTo(2, y);
+      }
       ctx.stroke();
       break;
     }

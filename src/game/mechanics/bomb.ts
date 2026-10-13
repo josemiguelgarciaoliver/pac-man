@@ -1,5 +1,5 @@
 import { TICK_RATE, TILE } from '../constants';
-import { bombSites, pickSpread, type BombSite } from '../level/placement';
+import { bombSites, pickSpread, type BombSite, type TileXY } from '../level/placement';
 import type { MechanicDef } from '../level/schema';
 import type { PacMan } from '../actors/pacman';
 import type { Rng } from '../random';
@@ -36,9 +36,10 @@ export class BombMechanic implements Mechanic {
     private readonly def: BombDef,
     lines: readonly string[],
     rng: Rng,
+    avoid: TileXY[] = [],
   ) {
     const sites = bombSites(lines);
-    const picked = pickSpread(lines, Math.min(def.count, sites.length), rng, sites);
+    const picked = pickSpread(lines, Math.min(def.count, sites.length), rng, sites, avoid);
     for (const t of picked) {
       const site = sites.find((s) => s.col === t.col && s.row === t.row)!;
       this.bombs.push({ site, phase: 'idle', ticks: 0 });

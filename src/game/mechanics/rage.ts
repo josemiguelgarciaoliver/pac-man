@@ -38,9 +38,9 @@ export class RageMechanic implements Mechanic {
   private furious: Furious[] = [];
   private readonly seconds: number;
 
-  constructor(def: RageDef, lines: readonly string[], rng: Rng) {
+  constructor(def: RageDef, lines: readonly string[], rng: Rng, avoid: TileXY[] = []) {
     this.seconds = def.seconds;
-    for (const tile of pickSpread(lines, def.count, rng)) this.traps.push({ tile, rearm: 0 });
+    for (const tile of pickSpread(lines, def.count, rng, undefined, avoid)) this.traps.push({ tile, rearm: 0 });
   }
 
   get tiles(): TileXY[] {
@@ -68,6 +68,8 @@ export class RageMechanic implements Mechanic {
     const pac = env.pac;
     for (const t of this.traps) {
       if (t.rearm > 0) {
+        // Si Pac-Man sigue encima cuando toca reaparecer, espera: no se recoge algo que no se ha visto aparecer.
+        if (t.rearm === 1 && t.tile.col === pac.col && t.tile.row === pac.row) continue;
         t.rearm--;
         continue;
       }

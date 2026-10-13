@@ -58,10 +58,11 @@ export class CompanionMechanic implements Mechanic {
     def: CompanionDef,
     private readonly lines: readonly string[],
     rng: Rng,
+    avoid: TileXY[] = [],
   ) {
     this.who = def.who;
     this.seconds = def.seconds ?? PROFILE[def.who].seconds;
-    for (const tile of pickSpread(lines, def.count, rng)) this.tokens.push({ tile, regrow: 0 });
+    for (const tile of pickSpread(lines, def.count, rng, undefined, avoid)) this.tokens.push({ tile, regrow: 0 });
   }
 
   get count(): number {
@@ -81,6 +82,8 @@ export class CompanionMechanic implements Mechanic {
     const pac = env.pac;
     for (const t of this.tokens) {
       if (t.regrow > 0) {
+        // Si Pac-Man sigue encima cuando toca reaparecer, espera: no se recoge algo que no se ha visto aparecer.
+        if (t.regrow === 1 && t.tile.col === pac.col && t.tile.row === pac.row) continue;
         t.regrow--;
         continue;
       }

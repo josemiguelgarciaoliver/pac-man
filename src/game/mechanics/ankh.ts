@@ -28,8 +28,8 @@ export class AnkhMechanic implements Mechanic {
   private items: Item[] = [];
   private wave: { x: number; y: number; ticks: number } | null = null;
 
-  constructor(def: AnkhDef, lines: readonly string[], rng: Rng) {
-    for (const tile of pickSpread(lines, def.count, rng)) this.items.push({ tile, regrow: 0 });
+  constructor(def: AnkhDef, lines: readonly string[], rng: Rng, avoid: TileXY[] = []) {
+    for (const tile of pickSpread(lines, def.count, rng, undefined, avoid)) this.items.push({ tile, regrow: 0 });
   }
 
   get tiles(): TileXY[] {
@@ -45,6 +45,8 @@ export class AnkhMechanic implements Mechanic {
     const pac = env.pac;
     for (const it of this.items) {
       if (it.regrow > 0) {
+        // Si Pac-Man sigue encima cuando toca reaparecer, espera: no se recoge algo que no se ha visto aparecer.
+        if (it.regrow === 1 && it.tile.col === pac.col && it.tile.row === pac.row) continue;
         it.regrow--;
         continue;
       }
