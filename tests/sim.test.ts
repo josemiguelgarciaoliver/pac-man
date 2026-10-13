@@ -30,7 +30,7 @@ class FakeInput {
     this.dir = d;
     if (d !== null) this.directionSeq++;
   }
-  private flags = { press: false, pause: false, mute: false, aina: false, aleix: false, fire: false };
+  private flags = { press: false, pause: false, mute: false, aina: false, aleix: false, fire: false, skip: false };
   poll() {}
   consumePress() {
     const v = this.flags.press;
@@ -65,6 +65,14 @@ class FakeInput {
   }
   pause() {
     this.flags.pause = true;
+  }
+  skip() {
+    this.flags.skip = true;
+  }
+  consumeSkip() {
+    const v = this.flags.skip;
+    this.flags.skip = false;
+    return v;
   }
   request(kind: 'aina' | 'aleix' | 'fire') {
     this.flags[kind] = true;
@@ -219,6 +227,45 @@ describe('checkpoints en el juego', () => {
     const g = game as unknown as Internals;
     g.nextLevel();
     expect(storage.getItem('pacman.checkpoint')).toBeNull();
+  });
+});
+
+describe('ayuda de desarrollo: S completa el nivel', () => {
+  it('S da el nivel por completado y lo registra, también desde la tarjeta de inicio', () => {
+    const storage = memoryStorage();
+    const { game, input, probe } = newGame(3, storage);
+    const g = game as unknown as { progress: { levels: Record<string, { stars: number }>; unlocked: number } };
+    expect(probe.state).toBe('ready'); // aún en la tarjeta
+    input.skip();
+    game.update();
+    expect(probe.state).toBe('clear');
+    expect(g.progress.unlocked).toBe(4);
+    expect(g.progress.levels['3'].stars).toBe(1); // completado a secas: una estrella
+    // Y sigue al siguiente nivel como cualquier otro.
+    for (let i = 0; i < 400 && probe.state === 'clear'; i++) game.update();
+    expect(probe.level).toBe(4);
+  });
+
+  it('en pleno juego también funciona, y no hace nada con la ayuda desactivada', () => {
+    const { game, input, probe } = newGame(2, memoryStorage());
+    for (let i = 0; i < 1500 && probe.state !== 'play'; i++) game.update();
+    expect(probe.state).toBe('play');
+    (game as unknown as { settings: { devSkip: boolean } }).settings.devSkip = false;
+    input.skip();
+    game.update();
+    expect(probe.state).toBe('play'); // desactivada: se ignora
+    (game as unknown as { settings: { devSkip: boolean } }).settings.devSkip = true;
+    input.skip();
+    game.update();
+    expect(probe.state).toBe('clear');
+  });
+
+  it('en el último nivel lleva a la pantalla de victoria', () => {
+    const { game, input, probe } = newGame(100, memoryStorage());
+    input.skip();
+    game.update();
+    for (let i = 0; i < 400 && probe.state !== 'victory'; i++) game.update();
+    expect(probe.state).toBe('victory');
   });
 });
 

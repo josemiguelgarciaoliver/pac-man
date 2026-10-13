@@ -53,6 +53,17 @@ describe('PacMan', () => {
   });
 });
 
+describe('teclas', () => {
+  it('S salta el nivel con la ayuda activada y mueve hacia abajo si está desactivada', async () => {
+    const { interpretKey } = await import('../src/input/input');
+    expect(interpretKey('KeyS', true)).toEqual({ dir: null, skip: true });
+    expect(interpretKey('KeyS', false)).toEqual({ dir: Dir.Down, skip: false });
+    expect(interpretKey('ArrowDown', true)).toEqual({ dir: Dir.Down, skip: false });
+    expect(interpretKey('KeyW', true).dir).toBe(Dir.Up);
+    expect(interpretKey('KeyQ', true)).toEqual({ dir: null, skip: false });
+  });
+});
+
 describe('cruceta virtual', () => {
   it('traduce el desplazamiento del dedo en una dirección', async () => {
     const { directionFromOffset } = await import('../src/input/input');

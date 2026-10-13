@@ -187,6 +187,7 @@ export class Game {
     private readonly audio: AudioManager,
   ) {
     this.loadLevel(1);
+    this.input.skipKeyEnabled = this.settings.devSkip;
     this.menus = new Menus(this.menuHost());
     this.menus.reset();
     this.syncMenuInput();
@@ -219,6 +220,7 @@ export class Game {
     const ainaRequested = this.input.consumeAina();
     const aleixRequested = this.input.consumeAleix();
     const fireRequested = this.input.consumeFire();
+    const skipRequested = this.input.consumeSkip();
 
     switch (this.state) {
       case 'title':
@@ -226,6 +228,10 @@ export class Game {
         this.menus.update(this.menuInput(pressed, pauseRequested));
         break;
       case 'ready':
+        if (skipRequested && this.settings.devSkip) {
+          this.skipLevel();
+          break;
+        }
         // La tarjeta de nivel se puede saltar con una pulsación pasado un momento.
         if (pressed && this.cardActive && this.timer > READY_TICKS && this.readyStart - this.timer >= CARD_SKIP_AFTER) this.timer = READY_TICKS;
         if (--this.timer <= 0) this.state = 'play';
@@ -233,6 +239,10 @@ export class Game {
       case 'play':
         if (pauseRequested) {
           this.pause();
+          break;
+        }
+        if (skipRequested && this.settings.devSkip) {
+          this.skipLevel();
           break;
         }
         if (ainaRequested) this.useAina();
@@ -315,6 +325,11 @@ export class Game {
         }
       },
       toggleMute: () => this.audio.toggleMute(),
+      setDevSkip: (on) => {
+        this.settings = { ...this.settings, devSkip: on };
+        this.input.skipKeyEnabled = on;
+        saveSettings(this.settings);
+      },
       setParticles: (on) => {
         this.settings = { ...this.settings, particles: on };
         saveSettings(this.settings);
@@ -374,6 +389,13 @@ export class Game {
   private retryLevel(): void {
     this.score = this.levelStartScore;
     this.startLevel();
+  }
+
+  /** Ayuda de desarrollo (tecla S): da el nivel por completado para revisar todos los niveles rápido. */
+  private skipLevel(): void {
+    // Cuenta como completado a secas: una sola estrella, sin récord de tiempo.
+    this.levelLivesLost = Math.max(1, this.levelLivesLost);
+    this.completeLevel();
   }
 
   /** Pausa automática al perder el foco (no hace nada si no se está jugando). */
