@@ -28,6 +28,7 @@ const shrooms = (count: number, effects: EffectKind[] = ['wobble', 'invert', 'sc
   effectSeconds,
 });
 const phenomenon = (effect: EffectKind, everySeconds: number, durationSeconds: number): MechanicDef => ({ type: 'phenomenon', effect, everySeconds, durationSeconds });
+const jelly = (count = 1): MechanicDef => ({ type: 'jellyfish', count });
 const mud = (count: number): MechanicDef => ({ type: 'puddle', count });
 const companion = (who: 'aleix' | 'aina', count = 1): MechanicDef => ({ type: 'companion', who, count });
 const blaster = (count = 1, seconds = 60): MechanicDef => ({ type: 'blaster', count, seconds });
@@ -95,15 +96,15 @@ export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
 
   // ── Mundo 6 — Fondo Marino: corrientes, medusas y remolinos ──
   51: { mechanics: [belts(4, { speed: 0.42, ghosts: true })] },
-  52: { mechanics: [mud(3), shrooms(2, ['wobble'], 6)] },
-  53: { mechanics: [saws(3, 0.5)] },
-  54: { mechanics: [portals(2)] },
+  52: { mechanics: [mud(3), shrooms(2, ['wobble'], 6), jelly(1)] },
+  53: { mission: { type: 'COLLECT', count: 5, icon: 'shell', timeLimit: 150 }, mechanics: [saws(3, 0.5), jelly(1)] },
+  54: { mission: { type: 'RESCUE' }, mechanics: [portals(2), jelly(2)] },
   55: { mechanics: [gates(3, 5, 3), belts(3, { speed: 0.42 })] },
-  56: { mechanics: [spikes(3, 5)] },
-  57: { mechanics: [gates(4, 5, 4)] },
+  56: { mechanics: [spikes(3, 5), jelly(2)] },
+  57: { mission: { type: 'SURVIVE', seconds: 80 }, mechanics: [gates(4, 5, 4), jelly(2)] },
   58: { mission: { type: 'COLLECT', count: 6, icon: 'pearl', timeLimit: 120 }, mechanics: [portals(2)] },
-  59: { mechanics: [belts(5, { speed: 0.42, ghosts: true, reverseEvery: 10 }), portals(1)] },
-  60: { mechanics: [saws(3, 0.7), turrets(2, 5), belts(3, { speed: 0.42 })] },
+  59: { mission: { type: 'REACH', timeLimit: 100 }, mechanics: [belts(5, { speed: 0.42, ghosts: true, reverseEvery: 10 }), portals(1), jelly(2)] },
+  60: { mechanics: [saws(3, 0.7), turrets(2, 5), belts(3, { speed: 0.42 }), jelly(3)] },
 
   // ── Mundo 7 — Volcán: géiseres, derrumbes y torretas de fuego ──
   61: { mechanics: [spikes(5, 4)] },

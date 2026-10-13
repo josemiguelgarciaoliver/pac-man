@@ -157,6 +157,7 @@ export class Mission {
           pearl: `RECOGE ${d.count} PERLAS`,
           cell: `RECOGE ${d.count} CELULAS`,
           gem: `RECOGE ${d.count} GEMAS`,
+          shell: `RECOGE ${d.count} CONCHAS`,
         };
         return [what[d.icon], d.timeLimit ? `ANTES DE ${d.timeLimit} SEGUNDOS` : ''];
       }
@@ -304,6 +305,29 @@ function drawCollectible(ctx: CanvasRenderingContext2D, icon: CollectIcon, x: nu
         ctx.lineTo(0.2, y);
         ctx.moveTo(1.2, y);
         ctx.lineTo(2, y);
+      }
+      ctx.stroke();
+      break;
+    }
+    case 'shell': {
+      // Concha de abanico rosada con costillas.
+      glow(ctx, '#ffb3c8');
+      const g = ctx.createLinearGradient(0, -4, 0, 4);
+      g.addColorStop(0, '#ffe3ea');
+      g.addColorStop(1, '#f58aa8');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(0, 3.6);
+      ctx.bezierCurveTo(-5.4, 1.6, -5, -4.2, 0, -4);
+      ctx.bezierCurveTo(5, -4.2, 5.4, 1.6, 0, 3.6);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#c24f72';
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      for (const dx of [-2.6, -1.3, 0, 1.3, 2.6]) {
+        ctx.moveTo(0, 3.4);
+        ctx.lineTo(dx * 1.1, -3.4);
       }
       ctx.stroke();
       break;

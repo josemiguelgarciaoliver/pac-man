@@ -823,3 +823,32 @@ describe('nivel 50: transportador entre mitades', () => {
     expect(Math.max(...tp.portals.map((p) => p.row))).toBeGreaterThan(19);
   });
 });
+
+describe('medusas del Fondo Marino', () => {
+  const water = [52, 53, 54, 56, 57, 59, 60];
+  it('solo hay medusas en el mundo del agua y todas se colocan', () => {
+    for (let n = 1; n <= 100; n++) {
+      const jelly = buildLevel(n).mechanics.some((m) => m.type === 'jellyfish');
+      expect(jelly, `nivel ${n}`).toBe(water.includes(n));
+    }
+    for (const n of water) {
+      const j = setup(n).mechanics.find((m) => m.kind === 'jellyfish') as unknown as { count: number };
+      expect(j.count, `nivel ${n}`).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('paralizan a Pac-Man sin matarlo y luego le dan un respiro', () => {
+    const s = setup(53);
+    const j = s.mechanics.find((m) => m.kind === 'jellyfish') as unknown as { paths: { col: number; row: number }[][]; stunned: boolean; pacSpeedFactor(p: unknown): number };
+    s.run(1);
+    const t = j.paths[0][0];
+    s.place(t.col, t.row);
+    s.run(1);
+    expect(j.stunned).toBe(true);
+    expect(j.pacSpeedFactor(s.pac)).toBeLessThan(0.1);
+    expect(s.hits()).toBe(false);
+    s.run(200);
+    expect(j.stunned).toBe(false);
+    expect(j.pacSpeedFactor(s.pac)).toBe(1);
+  });
+});

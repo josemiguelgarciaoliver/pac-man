@@ -212,9 +212,9 @@ describe('niveles raros', () => {
 });
 
 describe('rescate con el amigo a cuestas', () => {
-  it('los niveles de rescate son el 28, el 38, el 49 y el 78', () => {
+  it('los niveles de rescate son el 28, el 38, el 49, el 54 y el 78', () => {
     const rescues = levels.filter((l) => l.mission.type === 'RESCUE').map((l) => l.level);
-    expect(rescues).toEqual([28, 38, 49, 78]);
+    expect(rescues).toEqual([28, 38, 49, 54, 78]);
   });
 
   it('solo se va más lento una vez liberado el amigo, y deja de hacerlo al ponerlo a salvo', () => {

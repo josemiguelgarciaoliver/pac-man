@@ -12,7 +12,7 @@ export const missionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('COLLECT'),
     count: z.number().int().min(1).max(10),
-    icon: z.enum(['letters', 'nut', 'glyph', 'pearl', 'cell', 'gem']),
+    icon: z.enum(['letters', 'nut', 'glyph', 'pearl', 'cell', 'gem', 'shell']),
     timeLimit: z.number().int().min(10).max(300).optional(),
   }),
   /** Llegar a un punto del mapa, a veces contra reloj. */
@@ -73,6 +73,11 @@ export const mechanicSchema = z.discriminatedUnion('type', [
     pairs: z.number().int().min(1).max(3),
     /** 'topBottom': cada pareja une la mitad de arriba del laberinto con la de abajo. */
     link: z.enum(['any', 'topBottom']).default('any'),
+  }),
+  /** Medusas que patrullan un pasillo y paralizan un momento a Pac-Man si lo rozan. */
+  z.object({
+    type: z.literal('jellyfish'),
+    count: z.number().int().min(1).max(4),
   }),
   /** Pinchos que salen del suelo con ritmo (avisan antes de subir). */
   z.object({
