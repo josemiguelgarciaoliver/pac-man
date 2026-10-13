@@ -813,3 +813,13 @@ describe('objetos sin solaparse', () => {
     }
   });
 });
+
+describe('nivel 50: transportador entre mitades', () => {
+  it('conecta la parte de arriba con la de abajo', () => {
+    const s = setup(50);
+    const tp = s.mechanics.find((m) => m.kind === 'teleport') as unknown as { portals: { col: number; row: number }[] };
+    expect(tp.portals).toHaveLength(2);
+    expect(Math.min(...tp.portals.map((p) => p.row))).toBeLessThan(9);
+    expect(Math.max(...tp.portals.map((p) => p.row))).toBeGreaterThan(19);
+  });
+});

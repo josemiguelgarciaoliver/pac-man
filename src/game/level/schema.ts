@@ -71,6 +71,8 @@ export const mechanicSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('teleport'),
     pairs: z.number().int().min(1).max(3),
+    /** 'topBottom': cada pareja une la mitad de arriba del laberinto con la de abajo. */
+    link: z.enum(['any', 'topBottom']).default('any'),
   }),
   /** Pinchos que salen del suelo con ritmo (avisan antes de subir). */
   z.object({

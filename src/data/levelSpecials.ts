@@ -19,7 +19,7 @@ const bombs = (count: number, fuseSeconds = 3, radius = 2, area: 'any' | 'bottom
 const saws = (count: number, speed = 0.6): MechanicDef => ({ type: 'sawblade', count, speed });
 const turrets = (count: number, periodSeconds = 5): MechanicDef => ({ type: 'turret', count, periodSeconds });
 const gates = (count: number, openSeconds = 6, closedSeconds = 4): MechanicDef => ({ type: 'gate', count, openSeconds, closedSeconds });
-const portals = (pairs: number): MechanicDef => ({ type: 'teleport', pairs });
+const portals = (pairs: number, link: 'any' | 'topBottom' = 'any'): MechanicDef => ({ type: 'teleport', pairs, link });
 const spikes = (count: number, periodSeconds = 4.5): MechanicDef => ({ type: 'spikes', count, periodSeconds });
 const shrooms = (count: number, effects: EffectKind[] = ['wobble', 'invert', 'scramble', 'rotate', 'mirror', 'dark', 'turbo'], effectSeconds = 8): MechanicDef => ({
   type: 'mushroom',
@@ -91,7 +91,7 @@ export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
   47: { mechanics: [phenomenon('wobble', 14, 8), mud(2)] },
   48: { mechanics: [spikes(4, 4), saws(1, 0.7)] },
   49: { mission: { type: 'RESCUE' }, mechanics: [gates(3)] },
-  50: { mechanics: [turrets(3, 5), bombs(1, 3, 2, 'bottom'), spikes(2)] },
+  50: { mechanics: [turrets(3, 5), bombs(1, 3, 2, 'bottom'), spikes(2), portals(1, 'topBottom')] },
 
   // ── Mundo 6 — Fondo Marino: corrientes, medusas y remolinos ──
   51: { mechanics: [belts(4, { speed: 0.42, ghosts: true })] },

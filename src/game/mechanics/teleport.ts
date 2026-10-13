@@ -1,5 +1,5 @@
 import { MAZE_TOP, TICK_RATE } from '../constants';
-import { pickSpread, type TileXY } from '../level/placement';
+import { dotTiles, pickSpread, type TileXY } from '../level/placement';
 import type { MechanicDef } from '../level/schema';
 import type { Rng } from '../random';
 import { TAU, centerX, centerY, glow } from './geometry';
@@ -27,6 +27,19 @@ export class TeleportMechanic implements Mechanic {
 
   constructor(def: TeleportDef, lines: readonly string[], rng: Rng, avoid: TileXY[] = []) {
     // Los portales se reparten lo más lejos posible entre sí; se emparejan los que quedan opuestos.
+    if (def.link === 'topBottom') {
+      // Cada pareja une la mitad de arriba (filas < 9) con la de abajo (filas > 19).
+      const dots = dotTiles(lines);
+      const taken = [...avoid];
+      for (let i = 0; i < def.pairs; i++) {
+        const a = pickSpread(lines, 1, rng, dots.filter((t) => t.row < 9), taken)[0];
+        taken.push(a);
+        const b = pickSpread(lines, 1, rng, dots.filter((t) => t.row > 19), taken)[0];
+        taken.push(b);
+        this.pairs.push({ a, b, color: COLORS[i % COLORS.length] });
+      }
+      return;
+    }
     const spots = pickSpread(lines, def.pairs * 2, rng, undefined, avoid);
     for (let i = 0; i < def.pairs; i++) this.pairs.push({ a: spots[i], b: spots[spots.length - 1 - i], color: COLORS[i % COLORS.length] });
   }
