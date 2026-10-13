@@ -30,16 +30,24 @@ export type { Mechanic, MechanicEnv, SfxKind } from './mechanic';
 /** Mecánicas que reparten objetos por el laberinto: no pueden solaparse entre sí ni con la misión. */
 const PICKUPS = new Set(['ankh', 'blaster', 'bomb', 'boost', 'cloak', 'companion', 'hole', 'mushroom', 'rage', 'teleport']);
 
+/** Casillas que ocupan los objetos que reparten estas mecánicas (para que nada más caiga encima). */
+export function pickupTiles(mechanics: readonly Mechanic[]): TileXY[] {
+  const out: TileXY[] = [];
+  for (const m of mechanics) {
+    if (!PICKUPS.has(m.kind)) continue;
+    const own = m as unknown as { tiles?: TileXY[]; portals?: TileXY[]; sites?: TileXY[] };
+    out.push(...(own.tiles ?? own.portals ?? own.sites ?? []).map((t) => ({ col: t.col, row: t.row })));
+  }
+  return out;
+}
+
 /** Crea las mecánicas de un nivel a partir de sus datos. Para añadir una nueva: un caso aquí. */
 export function createMechanics(defs: readonly MechanicDef[], lines: readonly string[], rng: Rng, occupied: readonly TileXY[] = []): Mechanic[] {
   // Casillas ya ocupadas por objetos: ningún objeto nuevo cae encima ni al lado.
   const taken: TileXY[] = [...occupied];
   return defs.map((def): Mechanic => {
     const made = build(def, taken);
-    if (PICKUPS.has(def.type)) {
-      const own = made as unknown as { tiles?: TileXY[]; portals?: TileXY[]; sites?: TileXY[] };
-      taken.push(...(own.tiles ?? own.portals ?? own.sites ?? []).map((t) => ({ col: t.col, row: t.row })));
-    }
+    taken.push(...pickupTiles([made]));
     return made;
   });
 

@@ -18,7 +18,8 @@ import { nearestTile } from './level/placement';
 import type { LevelDef } from './level/schema';
 import { Maze } from './maze/maze';
 import { WallRenderer } from './maze/render';
-import { createMechanics, type Mechanic, type MechanicEnv } from './mechanics';
+import { createMechanics, pickupTiles, type Mechanic, type MechanicEnv } from './mechanics';
+import { LetterCollection, LetterTokens, WORDS, drawLetterHud } from './letters';
 import { drawParticles, renderBackground } from './theme/background';
 import { drawEmblem } from './theme/emblems';
 import { drawPelletShape } from './theme/pelletShapes';
@@ -158,6 +159,9 @@ export class Game {
   private levelStartScore = 0;
   private levelLivesLost = 0;
   private levelPlayTicks = 0;
+  /** Letras de AINA y ALEIX: duran todo el juego. */
+  private readonly letters = new LetterCollection();
+  private letterTokens: LetterTokens | null = null;
   private lastOutcome: RecordOutcome | null = null;
   private lastSeconds = 0;
   private cutsceneUnlocked: string[] = [];
@@ -393,6 +397,7 @@ export class Game {
 
   private startGame(level: number): void {
     this.score = 0;
+    this.letters.reset();
     this.lives = DIFFICULTY_PRESETS[this.difficulty].lives;
     this.level = Math.min(Math.max(Math.floor(level), 1), TOTAL_LEVELS);
     this.introJingle = true;
@@ -402,6 +407,7 @@ export class Game {
   /** Reanuda desde el último checkpoint: mismo nivel, puntuación y dificultad. */
   private continueGame(cp: Checkpoint): void {
     this.score = cp.score;
+    this.letters.restore(cp.letters);
     this.lives = Math.max(cp.lives, CHECKPOINT_MIN_LIVES);
     this.level = cp.level;
     this.difficulty = cp.difficulty;
@@ -429,7 +435,7 @@ export class Game {
     saveProgress(this.progress);
     this.cutsceneUnlocked = this.lastOutcome.album.map((id) => ALBUM.find((e) => e.id === id)?.title ?? id);
     if (isCheckpointLevel(done)) {
-      this.checkpoint = { level: done + 1, score: this.score, lives: this.lives, difficulty: this.difficulty };
+      this.checkpoint = { level: done + 1, score: this.score, lives: this.lives, difficulty: this.difficulty, letters: this.letters.snapshot() };
       saveCheckpoint(this.checkpoint);
       this.checkpointJustSaved = true;
       this.audio.play('extra_life');
@@ -457,6 +463,7 @@ export class Game {
     this.rules = getLevelRules(def.arcadeLevel, this.difficulty, def.level);
     this.mission = new Mission(def.mission, def.maze, createRng(def.level * 7919));
     this.mechanics = createMechanics(def.mechanics, def.maze, createRng((Math.random() * 2 ** 31) | 0), this.mission.occupied);
+    this.letterTokens = new LetterTokens(def.maze, createRng((Math.random() * 2 ** 31) | 0), this.letters, [...this.mission.occupied, ...pickupTiles(this.mechanics)]);
     this.helpers.reset();
   }
 
@@ -491,6 +498,20 @@ export class Game {
       sfx: (kind) => this.audio.sfx(kind),
       popup: (text, x, y) => this.popups.push({ x, y, text, ticks: 110 }),
     };
+  }
+
+  /** Pac-Man recoge una letra: si completa AINA y/o ALEIX, gana una vida por palabra. */
+  private collectLetter(letter: string): void {
+    const done = this.letters.collect(letter);
+    this.popups.push({ x: this.pac.x, y: this.pac.y - 10, text: letter, ticks: 70 });
+    if (done.length === 0) {
+      this.audio.sfx('collect');
+      return;
+    }
+    this.lives += done.length;
+    this.audio.play('extra_life');
+    const names = done.map((w) => WORDS[w]).join(' Y ');
+    this.popups.push({ x: Math.min(150, Math.max(70, this.pac.x)), y: Math.max(20, this.pac.y - 22), text: `${names}: +${done.length} ${done.length > 1 ? 'VIDAS' : 'VIDA'}`, ticks: 150 });
   }
 
   /** Aina y Aleix se comen los puntos por los que pasan: Pac-Man ya no tiene que recogerlos. */
@@ -708,6 +729,7 @@ export class Game {
       this.killPac();
       return;
     }
+    for (const letter of this.letterTokens?.update(this.pac) ?? []) this.collectLetter(letter);
     const picked = this.mission.update(this.pac);
     if (picked.item) this.audio.sfx('collect');
     if (picked.freed) {
@@ -998,6 +1020,7 @@ export class Game {
       for (const m of this.mechanics) m.draw(ctx, this.frame);
       this.mission.draw(ctx, this.frame);
       this.drawPellets(ctx);
+      this.letterTokens?.draw(ctx, this.frame);
     }
     if (this.fruitTicks > 0 && this.state !== 'clear') drawFruit(ctx, this.rules.fruit, FRUIT_X, MAZE_TOP + FRUIT_Y);
     this.helpers.draw(ctx, this.frame);
@@ -1147,8 +1170,10 @@ export class Game {
     if (effect) {
       const info = EFFECT_INFO[effect.kind];
       const blink = effect.seconds > 2 || Math.floor(this.frame / 8) % 2 === 0;
-      if (blink) drawText(ctx, `${info.label} ${effect.seconds}`, 40, 15, info.color);
+      const label = `${info.label} ${effect.seconds}`;
+      if (blink) drawTextRight(ctx, label, SCREEN_W - 4, 15, info.color);
     }
+    drawLetterHud(ctx, this.letters, 36, 22);
     this.drawHelperBadge(ctx, 10, 20, 'A', FAMILY.aina.color, this.helpers.ainaReady);
     this.drawHelperBadge(ctx, 24, 20, 'L', FAMILY.aleix.color, this.helpers.aleixReady);
   }

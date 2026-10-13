@@ -14,6 +14,8 @@ export interface Checkpoint {
   score: number;
   lives: number;
   difficulty: Difficulty;
+  /** Letras de AINA y ALEIX conseguidas hasta ahora (misión de todo el juego). */
+  letters?: { aina: boolean[]; aleix: boolean[] };
 }
 
 /** ¿Al completar este nivel toca guardar? (el último nivel no: ahí acaba el juego) */

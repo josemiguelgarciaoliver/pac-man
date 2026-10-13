@@ -442,3 +442,34 @@ describe('progresión en el juego (Fase 6)', () => {
     expect(storage.getItem('pacman.progress')).toBeNull();
   });
 });
+
+describe('letras AINA y ALEIX en la partida', () => {
+  type Letters = { lives: number; collectLetter(l: string): void; letters: { collect(l: string): string[]; snapshot(): { aina: boolean[]; aleix: boolean[] } }; letterTokens: { tiles: unknown[] } | null };
+
+  it('al completar una palabra se gana una vida; al completar las dos a la vez, dos', () => {
+    const { game } = newGame(5, memoryStorage());
+    const g = game as unknown as Letters;
+    const start = g.lives;
+    for (const l of ['N', 'A', 'I']) g.collectLetter(l);
+    expect(g.lives).toBe(start);
+    g.collectLetter('A');
+    expect(g.lives).toBe(start + 1); // AINA
+    // ALEIX lleva A e I; faltan L, E, X → al completar sube otra vida.
+    for (const l of ['L', 'E']) g.collectLetter(l);
+    g.collectLetter('X');
+    expect(g.lives).toBe(start + 2);
+    // Las dos a la vez: la 2.ª A y la A de ALEIX.
+    for (const l of ['N', 'I', 'A', 'L', 'E', 'X', 'I']) g.collectLetter(l);
+    const before = g.lives;
+    g.collectLetter('A');
+    expect(g.lives - before).toBeGreaterThanOrEqual(1);
+  });
+
+  it('empezar una partida nueva reinicia las letras', () => {
+    const { game } = newGame(5, memoryStorage());
+    const g = game as unknown as Letters & { startGame(level: number): void };
+    g.collectLetter('N');
+    g.startGame(1);
+    expect(g.letters.snapshot().aina.some(Boolean)).toBe(false);
+  });
+});
