@@ -1,6 +1,6 @@
 import type { PacMan } from '../actors/pacman';
 import { MAZE_TOP, TILE } from '../constants';
-import { beltRuns, type TileXY } from '../level/placement';
+import { beltRuns, openRuns, type TileXY } from '../level/placement';
 import type { MechanicDef } from '../level/schema';
 import type { Rng } from '../random';
 import { TAU, centerX, centerY, glow } from './geometry';
@@ -9,6 +9,14 @@ import type { Mechanic, MechanicEnv } from './mechanic';
 type SawDef = Extract<MechanicDef, { type: 'sawblade' }>;
 
 const RADIUS = 5.2;
+/** Longitud mínima (casillas) de la línea que recorre una sierra: cuanto más larga, más fácil pasar. */
+const MIN_TRACK = 10;
+/** Distancia mínima (Manhattan, casillas) entre la pista y la salida de Pac-Man. */
+const SPAWN_CLEARANCE = 6;
+const SPAWNS: TileXY[] = [
+  { col: 13, row: 23 },
+  { col: 14, row: 23 },
+];
 /** Distancia a la que la sierra alcanza a Pac-Man (px entre centros). */
 const HIT_DISTANCE = 6.2;
 
@@ -33,7 +41,14 @@ export class SawbladeMechanic implements Mechanic {
     rng: Rng,
   ) {
     const used: TileXY[] = [];
-    for (const run of rng.shuffle(beltRuns(lines))) {
+    // Primero las líneas más largas de pared a pared (tienen margen para esquivar); si no bastan, tramos rectos.
+    const awayFromSpawn = (tiles: TileXY[]) => tiles.every((t) => SPAWNS.every((s) => Math.abs(t.col - s.col) + Math.abs(t.row - s.row) >= SPAWN_CLEARANCE));
+    const long = rng
+      .shuffle(openRuns(lines, MIN_TRACK))
+      .filter((r) => awayFromSpawn(r.tiles))
+      .sort((a, b) => b.tiles.length - a.tiles.length);
+    const short = rng.shuffle(beltRuns(lines)).filter((r) => awayFromSpawn(r.tiles));
+    for (const run of [...long, ...short]) {
       if (this.saws.length >= def.count) break;
       if (run.tiles.some((t) => used.some((u) => Math.abs(u.col - t.col) + Math.abs(u.row - t.row) < 3))) continue;
       const from = run.tiles[0];

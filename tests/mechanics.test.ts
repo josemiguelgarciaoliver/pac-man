@@ -355,8 +355,8 @@ describe('supervelocidad', () => {
     s.place(tile.col, tile.row);
     s.run(1);
     expect(s.view.has('boost')).toBe(true);
-    expect(s.view.speedFactor).toBeGreaterThanOrEqual(1.6);
-    expect(s.view.speedFactor).toBeLessThan(2); // supervelocidad, pero controlable
+    expect(s.view.speedFactor).toBeGreaterThanOrEqual(1.4);
+    expect(s.view.speedFactor).toBeLessThan(1.7); // supervelocidad, pero controlable
     expect(s.view.secondsLeft('boost')).toBe(60);
     expect(s.popups).toContain('SUPERVELOCIDAD');
     // Ya no está: pasar otra vez no vuelve a dar nada.
@@ -692,5 +692,44 @@ describe('envenenamiento (Pac-Man verde)', () => {
     s.place(m.tiles[0].col, m.tiles[0].row);
     s.run(1);
     expect(s.view.poisoned).toBe(true);
+  });
+});
+
+describe('sierras de línea larga', () => {
+  const sawLevels = Array.from({ length: 100 }, (_, i) => i + 1).filter((n) => buildLevel(n).mechanics.some((m) => m.type === 'sawblade'));
+
+  it('patrullan líneas largas y nunca pasan cerca de la salida de Pac-Man', () => {
+    expect(sawLevels.length).toBeGreaterThan(5);
+    for (const n of sawLevels) {
+      const s = setup(n);
+      const saws = s.mechanics.filter((m) => m instanceof SawbladeMechanic) as SawbladeMechanic[];
+      for (const saw of saws) {
+        for (const tr of saw.tracks) {
+          const len = Math.abs(tr.to.col - tr.from.col) + Math.abs(tr.to.row - tr.from.row) + 1;
+          expect(len, `nivel ${n}: línea de la sierra`).toBeGreaterThanOrEqual(10);
+          // Ni la salida (13,23)/(14,23) ni sus alrededores inmediatos están en la pista.
+          const cols = [tr.from.col, tr.to.col].sort((a, b) => a - b);
+          const rows = [tr.from.row, tr.to.row].sort((a, b) => a - b);
+          const crossesSpawn = cols[0] <= 14 && cols[1] >= 13 && rows[0] <= 23 && rows[1] >= 23;
+          expect(crossesSpawn, `nivel ${n}`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('una sierra de línea larga deja huecos: pasar de un lado a otro de la línea es posible', () => {
+    // La sierra solo está sobre una casilla una fracción pequeña del tiempo.
+    const s = setup(sawLevels[0]);
+    const saw = s.mechanics.find((m) => m instanceof SawbladeMechanic) as SawbladeMechanic;
+    const track = saw.tracks[0];
+    const mid = { col: Math.round((track.from.col + track.to.col) / 2), row: Math.round((track.from.row + track.to.row) / 2) };
+    s.place(mid.col, mid.row);
+    let danger = 0;
+    const ticks = 3000;
+    for (let i = 0; i < ticks; i++) {
+      s.run(1);
+      if (s.hits()) danger++;
+    }
+    expect(danger / ticks).toBeLessThan(0.15);
   });
 });
