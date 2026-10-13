@@ -1,6 +1,6 @@
 export type SoundName = 'start' | 'waka' | 'eat_fruit' | 'eat_ghost' | 'extra_life' | 'intermission' | 'death';
 /** Efectos sintetizados de las mecánicas de nivel. */
-export type SfxKind = 'explosion' | 'zap' | 'teleport' | 'tick' | 'gate' | 'spike' | 'poison' | 'boost' | 'rage' | 'summon' | 'shoot' | 'gun' | 'aleix' | 'aina' | 'collect' | 'rescue' | 'hint' | 'decoy';
+export type SfxKind = 'explosion' | 'zap' | 'teleport' | 'tick' | 'gate' | 'spike' | 'poison' | 'boost' | 'rage' | 'summon' | 'shoot' | 'gun' | 'aleix' | 'aina' | 'collect' | 'rescue' | 'hint' | 'decoy' | 'ankh';
 export type AmbientKind = 'siren' | 'power' | 'eyes';
 
 const FILES: SoundName[] = ['start', 'waka', 'eat_fruit', 'eat_ghost', 'extra_life', 'intermission', 'death'];
@@ -176,6 +176,12 @@ export class AudioManager {
         break;
       case 'spike':
         burst(0.1, 0.28, 3200, 1200);
+        break;
+      case 'ankh':
+        // Acorde solemne que sube y una onda de aire.
+        for (const f of [220, 277, 330, 440]) tone('triangle', f, f * 1.01, 0.9, 0.12);
+        tone('sine', 660, 1320, 0.7, 0.1, 0.1);
+        burst(0.5, 0.18, 800, 3200);
         break;
       case 'gun':
         // Pistola: clic metálico de montar el arma y una carga que sube.

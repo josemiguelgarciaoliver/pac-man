@@ -8,6 +8,7 @@ import { Maze } from '../src/game/maze/maze';
 import { createMechanics } from '../src/game/mechanics';
 import { BombMechanic } from '../src/game/mechanics/bomb';
 import { CompanionMechanic } from '../src/game/mechanics/companion';
+import { AnkhMechanic } from '../src/game/mechanics/ankh';
 import { BlasterMechanic } from '../src/game/mechanics/blaster';
 import { BoostMechanic } from '../src/game/mechanics/boost';
 import { Projectiles } from '../src/game/projectiles';
@@ -750,5 +751,45 @@ describe('sierras separadas entre sí', () => {
       const saws = setup(n).mechanics.find((m) => m instanceof SawbladeMechanic) as SawbladeMechanic;
       expect(saws.gap, `nivel ${n}`).toBeGreaterThanOrEqual(3);
     }
+  });
+});
+
+describe('Anj del desierto', () => {
+  it('aparece solo en algunos niveles del mundo 5', () => {
+    const levels = Array.from({ length: 100 }, (_, i) => i + 1).filter((n) => buildLevel(n).mechanics.some((m) => m.type === 'ankh'));
+    expect(levels).toEqual([42, 45, 48]);
+    for (const n of levels) expect(buildLevel(n).world).toBe(5);
+  });
+
+  it('al cogerlo destruye a todos los fantasmas, suena y avisa', () => {
+    const s = setup(42);
+    const ankh = s.mechanics.find((m) => m instanceof AnkhMechanic) as AnkhMechanic;
+    expect(ankh).toBeDefined();
+    // Dos fantasmas sueltos, uno saliendo de la casa y otro dentro.
+    s.ghosts[0].state = 'active';
+    s.ghosts[1].state = 'active';
+    s.ghosts[2].state = 'leaving';
+    s.ghosts[2].y = 100;
+    s.ghosts[3].state = 'house';
+    const tile = ankh.tiles[0];
+    s.place(tile.col, tile.row);
+    s.run(1);
+    expect(s.killed).toEqual([s.ghosts[0], s.ghosts[1]]); // los activos se convierten en ojos
+    expect(s.ghosts[2].state).toBe('house'); // el que salía vuelve a la casa a regenerarse
+    expect(s.ghosts[2].reviveTicks).toBeGreaterThan(0);
+    expect(s.ghosts[3].reviveTicks).toBeGreaterThan(0);
+    expect(s.sounds).toContain('ankh');
+    expect(s.popups.some((p) => p.includes('ANJ'))).toBe(true);
+  });
+
+  it('no se puede coger dos veces seguidas', () => {
+    const s = setup(42);
+    const ankh = s.mechanics.find((m) => m instanceof AnkhMechanic) as AnkhMechanic;
+    s.place(ankh.tiles[0].col, ankh.tiles[0].row);
+    s.ghosts[0].state = 'active';
+    s.run(1);
+    s.ghosts[1].state = 'active';
+    s.run(5);
+    expect(s.killed).toHaveLength(1); // el segundo fantasma no cae: el Anj ya se gastó
   });
 });

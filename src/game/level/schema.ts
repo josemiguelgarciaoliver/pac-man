@@ -90,6 +90,11 @@ export const mechanicSchema = z.discriminatedUnion('type', [
     everySeconds: z.number().min(6).max(90),
     durationSeconds: z.number().min(3).max(40),
   }),
+  /** Anj (☥): al cogerlo destruye a todos los fantasmas. */
+  z.object({
+    type: z.literal('ankh'),
+    count: z.number().int().min(1).max(2),
+  }),
   /** Blaster: Pac-Man puede disparar a los fantasmas (1 minuto por defecto). */
   z.object({
     type: z.literal('blaster'),

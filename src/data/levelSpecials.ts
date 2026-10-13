@@ -31,6 +31,7 @@ const phenomenon = (effect: EffectKind, everySeconds: number, durationSeconds: n
 const mud = (count: number): MechanicDef => ({ type: 'puddle', count });
 const companion = (who: 'aleix' | 'aina', count = 1): MechanicDef => ({ type: 'companion', who, count });
 const blaster = (count = 1, seconds = 60): MechanicDef => ({ type: 'blaster', count, seconds });
+const ankh = (count = 1): MechanicDef => ({ type: 'ankh', count });
 const furia = (count = 1, seconds = 6): MechanicDef => ({ type: 'rage', count, seconds });
 const bolt = (count = 1, seconds = 60): MechanicDef => ({ type: 'boost', count, seconds });
 
@@ -193,4 +194,10 @@ for (let n = 6; n <= 100; n++) {
 for (const n of [...Array.from({ length: 19 }, (_, i) => 7 + i * 5), 100]) {
   const entry = (LEVEL_SPECIALS[n] ??= {});
   entry.mechanics = [...(entry.mechanics ?? []), blaster(n >= 50 ? 2 : 1)];
+}
+
+/** Anj (☥) en el mundo del desierto: aparece en unos pocos niveles y destruye a todos los fantasmas. */
+for (const n of [42, 45, 48]) {
+  const entry = (LEVEL_SPECIALS[n] ??= {});
+  entry.mechanics = [...(entry.mechanics ?? []), ankh()];
 }

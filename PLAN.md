@@ -374,6 +374,7 @@ Cada mecánica es un *plugin* (`src/game/mechanics/`) descrito por datos en el n
 | Objeto | Efecto |
 |---|---|
 | **Zapatillas rojas** | Supervelocidad (×1,45) durante **1 minuto**, con estela. Un nivel de cada cinco (4, 9, 14…) y el 100 |
+| **Anj ☥** | Solo en el mundo del desierto (niveles 42, 45 y 48): al cogerlo, una onda dorada **destruye a todos los fantasmas** (los de fuera se vuelven ojos; los de la casa se quedan regenerándose) |
 | **Pistola** | Pac-Man **lleva la pistola en la mano** (apunta hacia donde mira, con retroceso al disparar) y puede **disparar** durante 1 minuto (Espacio / botón FUEGO / botón B del mando); cada disparo convierte en ojos al primer fantasma que alcanza. Niveles 7, 12, 17… y el 100 |
 | **Miniaturas de Aleix y Aina** | Su insignia invoca al hijo en miniatura, que **caza fantasmas** unos segundos (Aleix: rápido y va a por el más cercano a él, 10 s; Aina: más lenta, protege a Pac-Man, 14 s). La cara se puede sustituir por una foto: `public/assets/faces/aleix.png` y `aina.png` |
 | **Trampa de furia** | Una placa roja que, al pisarla, enfurece a **un** fantasma al azar con supervelocidad unos segundos (aura roja y aviso con su nombre) |
