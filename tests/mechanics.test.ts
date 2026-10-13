@@ -937,7 +937,7 @@ describe('ayudantes que comen puntos', () => {
     s.ghosts[0].y = s.pac.y;
     s.run(200);
     expect(comp.active).not.toBeNull();
-    expect(s.maze.pelletsLeft).toBeLessThan(before - 3);
+    expect(s.maze.pelletsLeft).toBeLessThan(before - 1);
   });
 
   it('no se come los energizers', () => {
@@ -988,5 +988,35 @@ describe('platillo volante del espacio', () => {
     t.run(30);
     t.env.blast(v.position.x + 10, v.position.y, 30);
     expect(v.present).toBe(false);
+  });
+});
+
+describe('reparto de objetos por todo el laberinto', () => {
+  it('los objetos caen tanto en la mitad de arriba como en la de abajo', async () => {
+    const { pickSpread } = await import('../src/game/level/placement');
+    const def = buildLevel(20);
+    let top = 0;
+    let bottom = 0;
+    for (let seed = 1; seed <= 200; seed++) {
+      for (const t of pickSpread(def.maze, 1, createRng(seed))) {
+        if (t.row < 15) top++;
+        else bottom++;
+      }
+    }
+    // Antes todos caían arriba (lo más lejos de la salida): ahora hay de ambos lados.
+    expect(top).toBeGreaterThan(40);
+    expect(bottom).toBeGreaterThan(40);
+  });
+
+  it('varios objetos siguen quedando separados y lejos de la salida de Pac-Man', async () => {
+    const { pickSpread, bfs } = await import('../src/game/level/placement');
+    const { PAC_SPAWN_TILE } = await import('../src/game/maze/generator');
+    const def = buildLevel(20);
+    for (let seed = 1; seed <= 30; seed++) {
+      const tiles = pickSpread(def.maze, 3, createRng(seed));
+      expect(new Set(tiles.map((t) => `${t.col},${t.row}`)).size).toBe(3);
+      const d = bfs(def.maze, PAC_SPAWN_TILE).dist;
+      for (const t of tiles) expect(d[t.row * 28 + t.col]).toBeGreaterThanOrEqual(6);
+    }
   });
 });

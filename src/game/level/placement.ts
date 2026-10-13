@@ -94,30 +94,36 @@ export function dotTiles(lines: readonly string[]): TileXY[] {
   return out;
 }
 
+/** Distancia mínima (casillas) a la salida de Pac-Man para colocar un objeto. */
+const MIN_FROM_SPAWN = 6;
+/** Separación (casillas por pasillo) que se intenta guardar entre objetos del mismo tipo; se va relajando. */
+const SEPARATIONS = [14, 11, 8, 5, 3, 0];
+
 /**
- * Reparte `count` casillas lo más lejos posible unas de otras y de la salida de Pac-Man
- * (muestreo del punto más lejano; entre los mejores candidatos elige uno al azar).
+ * Reparte `count` casillas al azar por TODO el laberinto (no solo por la parte alejada de la salida),
+ * procurando que queden separadas entre sí: cada una se elige al azar entre las que cumplen la
+ * separación, y si no hay sitio se va relajando. Nunca cae demasiado cerca de la salida de Pac-Man.
  */
 export function pickSpread(lines: readonly string[], count: number, rng: Rng, allCandidates: TileXY[] = dotTiles(lines), avoid: readonly TileXY[] = []): TileXY[] {
   // Nunca dos objetos en la misma casilla (ni pegados): se vería uno y se recogerían los dos.
   const free = allCandidates.filter((t) => avoid.every((a) => Math.abs(a.col - t.col) + Math.abs(a.row - t.row) >= 2));
   const candidates = free.length >= count ? free : allCandidates;
-  const minDist = new Map<number, number>();
   const spawnDist = bfs(lines, PAC_SPAWN_TILE).dist;
-  for (const t of candidates) minDist.set(key(t.col, t.row), spawnDist[key(t.col, t.row)]);
+  const fromChosen: Int16Array[] = [];
 
   const chosen: TileXY[] = [];
   for (let i = 0; i < count; i++) {
-    let max = -1;
-    for (const d of minDist.values()) max = Math.max(max, d);
-    const top = candidates.filter((t) => (minDist.get(key(t.col, t.row)) ?? -1) >= max * 0.85 && !chosen.includes(t));
-    const pick = top[rng.int(top.length)];
-    chosen.push(pick);
-    const d = bfs(lines, pick).dist;
-    for (const t of candidates) {
-      const k = key(t.col, t.row);
-      minDist.set(k, Math.min(minDist.get(k) ?? Infinity, d[k]));
+    let pool: TileXY[] = [];
+    for (const minSpawn of [MIN_FROM_SPAWN, 0]) {
+      for (const sep of SEPARATIONS) {
+        pool = candidates.filter((t) => !chosen.includes(t) && spawnDist[key(t.col, t.row)] >= minSpawn && fromChosen.every((d) => d[key(t.col, t.row)] >= sep));
+        if (pool.length > 0) break;
+      }
+      if (pool.length > 0) break;
     }
+    const pick = pool.length > 0 ? pool[rng.int(pool.length)] : candidates.filter((t) => !chosen.includes(t))[0];
+    chosen.push(pick);
+    fromChosen.push(bfs(lines, pick).dist);
   }
   return chosen;
 }
