@@ -96,17 +96,18 @@ const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
  * Reglas de dificultad de un nivel.
  *  - `level`: nivel equivalente del arcade (indexa fruta y salida de la casa).
  *  - `difficulty`: preset del jugador. Su ayuda se va desvaneciendo con el avance del juego.
- *  - `global`: nivel global 1–100. La dificultad crece SIN bajar nunca hasta el 100, donde los fantasmas
- *    corren mucho más que Pac-Man, no hay dispersión ni estado asustado: es prácticamente imposible.
+ *  - `global`: nivel global 1–100. La dificultad crece SIN bajar nunca hasta el 100, donde casi no hay
+ *    dispersión (respiro). Los fantasmas nunca superan la velocidad de Pac-Man.
  */
 export function getLevelRules(level: number, difficulty: Difficulty = 'arcade', global: number = level): LevelRules {
   const p = clamp01((global - 1) / 99);
   const ramp = clamp01(p / 0.3); // tarda hasta el nivel ~31 en llegar a los valores de velocidad del arcade
   const fade = p ** 1.4; // cuánto se ha desvanecido la ayuda del preset (0 al principio, 1 en el nivel 100)
 
-  // Velocidades base (fracción del 100 %): suben juntas; luego Pac-Man pierde algo y los fantasmas se disparan.
-  const pacBase = (0.8 + 0.2 * ramp) * (1 - 0.1 * p ** 2);
-  const ghostBase = (0.75 + 0.2 * ramp) * (1 + 0.38 * p ** 4.5);
+  // Velocidades base (fracción del 100 %): suben juntas hasta el nivel ~31 y ahí se quedan. Los fantasmas
+  // nunca son más rápidos que Pac-Man: la dificultad sube por el resto (dispersión, Elroy, mecánicas).
+  const pacBase = 0.8 + 0.2 * ramp;
+  const ghostBase = 0.75 + 0.2 * ramp;
   const ghostTunnelBase = 0.4 + 0.1 * ramp;
   const ghostFrightBase = 0.5 + 0.1 * ramp;
 
@@ -145,9 +146,9 @@ export function getLevelRules(level: number, difficulty: Difficulty = 'arcade', 
     ghostTunnelSpeed: ghostTunnelBase * gMul,
     ghostFrightSpeed: ghostFrightBase * gMul,
     elroy1Dots: Math.round(elroy1 * elroyShare),
-    elroy1Speed: ghostSpeed * 1.07,
+    elroy1Speed: Math.min(ghostSpeed * 1.07, pacSpeed * 0.97),
     elroy2Dots: Math.round((elroy1 / 3) * elroyShare),
-    elroy2Speed: ghostSpeed * 1.13,
+    elroy2Speed: Math.min(ghostSpeed * 1.13, pacSpeed * 0.99),
     frightTicks,
     flashes: 5,
     schedule,

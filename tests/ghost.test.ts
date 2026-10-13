@@ -174,19 +174,28 @@ describe('progresión del 1 al 100', () => {
       }
     });
 
-    it(`el nivel 100 es prácticamente imposible (preset ${preset}): fantasmas mucho más rápidos, sin respiro`, () => {
+    it(`ningún fantasma es más rápido que Pac-Man en ningún nivel (preset ${preset})`, () => {
+      for (let n = 1; n <= 100; n++) {
+        const r = rulesAt(n, preset);
+        expect(r.ghostSpeed, `nivel ${n}`).toBeLessThan(r.pacSpeed);
+        expect(r.elroy1Speed, `nivel ${n} elroy1`).toBeLessThan(r.pacSpeed);
+        expect(r.elroy2Speed, `nivel ${n} elroy2`).toBeLessThan(r.pacSpeed);
+      }
+    });
+
+    it(`el nivel 100 es el más duro (preset ${preset}): casi sin respiro y con Elroy temprano`, () => {
       const r = rulesAt(100, preset);
-      expect(r.ghostSpeed / r.pacSpeed).toBeGreaterThan(1.4);
       expect(r.schedule[0]).toBeLessThanOrEqual(90); // la dispersión dura como mucho 1,5 s
       expect(r.elroy1Dots).toBeGreaterThanOrEqual(100);
     });
   }
 
-  it('el primer nivel es asequible y el último muy superior', () => {
+  it('el primer nivel es asequible y el último más exigente (sin pasar de la velocidad de Pac-Man)', () => {
     const first = rulesAt(1, 'easy');
     const last = rulesAt(100, 'easy');
     expect(first.ghostSpeed / first.pacSpeed).toBeLessThan(0.8);
-    expect(last.ghostSpeed / last.pacSpeed).toBeGreaterThan(1.4);
+    expect(last.ghostSpeed / last.pacSpeed).toBeGreaterThan(first.ghostSpeed / first.pacSpeed);
+    expect(last.ghostSpeed / last.pacSpeed).toBeLessThan(1);
   });
 });
 
