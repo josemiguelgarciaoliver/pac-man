@@ -37,6 +37,20 @@ const PRIORITY = [Dir.Up, Dir.Left, Dir.Down, Dir.Right];
 /** Tolerancia (px) para decidir que un actor ha llegado al centro de una casilla: evita que el redondeo se salte el giro. */
 const EPS = 1e-6;
 
+/** Vuelo de un fantasma lanzado por la bomba de Aina: sale despedido y cae lejos (atravesando paredes). */
+export interface Flight {
+  sx: number;
+  sy: number;
+  tx: number;
+  ty: number;
+  t: number;
+  dur: number;
+}
+
+export const FLIGHT_TICKS = 52;
+/** Altura máxima (px) del salto. */
+export const FLIGHT_HEIGHT = 30;
+
 export interface MoveEnv {
   maze: Maze;
   /** Casilla objetivo (ignorada si el fantasma está asustado). */
@@ -60,6 +74,8 @@ export class Ghost {
   /** Ticks que le quedan para regenerarse en la casa tras ser comido (0 = no se está regenerando). */
   reviveTicks = 0;
   anim = 0;
+  /** Si no es null, el fantasma está por los aires (no se mueve por el laberinto ni toca a nadie). */
+  flight: Flight | null = null;
   private reversePending = false;
   private bobDir = 1;
 
@@ -83,6 +99,7 @@ export class Ghost {
     this.elroy = 0;
     this.reviveTicks = 0;
     this.anim = 0;
+    this.flight = null;
     this.reversePending = false;
     this.bobDir = this.name === 'inky' ? 1 : -1;
     if (this.name === 'blinky') {
@@ -111,8 +128,36 @@ export class Ghost {
     }
   }
 
+  /** Lo lanza desde donde está hasta el centro de la casilla (tc, tr). */
+  launch(tc: number, tr: number): void {
+    this.flight = { sx: this.x, sy: this.y, tx: tc * TILE + TILE / 2, ty: tr * TILE + TILE / 2, t: 0, dur: FLIGHT_TICKS };
+  }
+
+  /** Altura actual del salto en px (0 en el suelo). */
+  get lift(): number {
+    const f = this.flight;
+    return f ? Math.sin((f.t / f.dur) * Math.PI) * FLIGHT_HEIGHT : 0;
+  }
+
+  private fly(env: MoveEnv): void {
+    const f = this.flight!;
+    f.t++;
+    const k = Math.min(1, f.t / f.dur);
+    this.x = f.sx + (f.tx - f.sx) * k;
+    this.y = f.sy + (f.ty - f.sy) * k;
+    if (f.t < f.dur) return;
+    // Aterriza: se coloca en la casilla y echa a andar por la primera salida libre.
+    this.flight = null;
+    const col = Math.floor(f.tx / TILE);
+    const row = Math.floor(f.ty / TILE);
+    const options = env.rng.shuffle(PRIORITY).filter((d) => env.maze.isWalkable(col + DIRS[d].x, row + DIRS[d].y));
+    this.reversePending = false;
+    this.spawnAt(env, col, row, options[0] ?? Dir.Left);
+  }
+
   move(env: MoveEnv, speed: number): void {
     this.anim++;
+    if (this.flight) return this.fly(env);
     switch (this.state) {
       case 'house':
         this.bob(env.houseSpeed);

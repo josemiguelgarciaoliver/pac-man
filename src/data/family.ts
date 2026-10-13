@@ -6,7 +6,7 @@ export type FamilyMember = 'cely' | 'aina' | 'aleix';
 
 export const FAMILY: Record<FamilyMember, { name: string; color: string; role: string }> = {
   cely: { name: 'CELY', color: '#ff5fa8', role: 'Esposa secuestrada por el Fantasma Rey' },
-  aina: { name: 'AINA', color: '#7fd7ff', role: 'Navegante: marca el camino (Pista)' },
+  aina: { name: 'AINA', color: '#7fd7ff', role: 'Valiente: lanza por los aires a los fantasmas (Bomba)' },
   aleix: { name: 'ALEIX', color: '#ffb347', role: 'Travieso: despista a los fantasmas (Señuelo)' },
 };
 

@@ -94,7 +94,7 @@ interface Probe {
   level: number;
   maze: { charAt(c: number, r: number): string; pelletsLeft: number };
   pac: { col: number; row: number; x: number; y: number };
-  ghosts: { col: number; row: number; name: string; state: string }[];
+  ghosts: { col: number; row: number; name: string; state: string; flight: unknown }[];
   score: number;
 }
 
@@ -131,7 +131,7 @@ describe('simulación sin interfaz', () => {
           // Nadie atraviesa paredes.
           expect(probe.maze.charAt(probe.pac.col, probe.pac.row), `Pac-Man en pared (t=${t})`).not.toBe('#');
           for (const g of probe.ghosts) {
-            if (g.state === 'house' || g.state === 'leaving' || g.state === 'entering') continue;
+            if (g.state === 'house' || g.state === 'leaving' || g.state === 'entering' || g.flight) continue; // en vuelo (bomba de Aina) sí cruza paredes
             expect(probe.maze.charAt(g.col, g.row), `${g.name} en pared (t=${t})`).not.toBe('#');
           }
         }
@@ -471,5 +471,96 @@ describe('letras AINA y ALEIX en la partida', () => {
     g.collectLetter('N');
     g.startGame(1);
     expect(g.letters.snapshot().aina.some(Boolean)).toBe(false);
+  });
+});
+
+describe('habilidades de Aina y Aleix', () => {
+  type Inner = Probe & {
+    ghosts: { x: number; y: number; col: number; row: number; state: string; flight: unknown; frightened: boolean }[];
+    pac: { x: number; y: number; col: number; row: number };
+    helpers: { ainaReady: boolean; aleixReady: boolean };
+  };
+
+  const toPlay = (level: number) => {
+    const g = newGame(level, memoryStorage());
+    for (let i = 0; i < 1500 && g.probe.state !== 'play'; i++) g.game.update();
+    expect(g.probe.state).toBe('play');
+    return g;
+  };
+
+  it('la bomba de Aina lanza a los fantasmas cercanos lejos de Pac-Man, sobre las paredes, y aterrizan en suelo libre', () => {
+    const { game, input, probe } = toPlay(2);
+    const p = probe as Inner;
+    // Un fantasma pegado a Pac-Man y otro muy lejos.
+    const near = p.ghosts[0];
+    const far = p.ghosts[1];
+    near.state = 'active';
+    near.x = p.pac.x + 14;
+    near.y = p.pac.y;
+    far.state = 'active';
+    far.x = 12;
+    far.y = 12;
+    const farBefore = { x: far.x, y: far.y };
+    input.request('aina');
+    game.update();
+    expect(near.flight).not.toBeNull();
+    expect(far.flight).toBeNull();
+    expect((game as unknown as { helpers: { ainaReady: boolean } }).helpers.ainaReady).toBe(false);
+    for (let i = 0; i < 80 && near.flight; i++) game.update();
+    expect(near.flight).toBeNull();
+    expect(Math.hypot(near.x - p.pac.x, near.y - p.pac.y)).toBeGreaterThan(80);
+    expect(p.maze.charAt(near.col, near.row)).not.toBe('#');
+    expect(far.x).not.toBe(NaN);
+    expect(farBefore.x).toBe(12);
+  });
+
+  it('un fantasma en el aire no mata a Pac-Man', () => {
+    const { game, input, probe } = toPlay(2);
+    const p = probe as Inner;
+    const g = p.ghosts[0];
+    g.state = 'active';
+    g.x = p.pac.x + 6;
+    g.y = p.pac.y;
+    input.request('aina');
+    game.update();
+    expect(g.flight).not.toBeNull();
+    g.x = p.pac.x;
+    g.y = p.pac.y;
+    game.update();
+    expect(probe.state).toBe('play');
+  });
+
+  it('el señuelo de Aleix dura 8 segundos', async () => {
+    const { DECOY_TICKS } = await import('../src/game/familyHelpers');
+    expect(DECOY_TICKS).toBe(8 * 60);
+  });
+});
+
+describe('mando (gamepad)', () => {
+  const pad = (down: number[] = [], axes: number[] = [0, 0]) => ({ buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: down.includes(i) })), axes });
+
+  it('X lanza a Aina, Y a Aleix (y L1/R1 también), solo al pulsar y no al mantener', async () => {
+    const { PadReader } = await import('../src/input/input');
+    const r = new PadReader();
+    expect(r.read(pad([2]))).toMatchObject({ aina: true, aleix: false });
+    expect(r.read(pad([2]))).toMatchObject({ aina: false }); // mantenido: no repite
+    expect(r.read(pad([]))).toMatchObject({ aina: false });
+    expect(r.read(pad([3]))).toMatchObject({ aleix: true, aina: false });
+    expect(r.read(pad([4]))).toMatchObject({ aina: true });
+    expect(r.read(pad([5]))).toMatchObject({ aleix: true });
+  });
+
+  it('cruceta, stick, A, Start y disparo funcionan', async () => {
+    const { PadReader } = await import('../src/input/input');
+    const r = new PadReader();
+    expect(r.read(pad([12])).dir).toBe(Dir.Up);
+    expect(r.read(pad([12])).dir).toBeNull(); // mantenida: se repite cada 14 ticks
+    expect(r.read(pad([], [0.9, 0])).dir).toBe(Dir.Right);
+    expect(r.read(pad([0])).press).toBe(true);
+    expect(r.read(pad([9]))).toMatchObject({ pause: true, press: true });
+    expect(r.read(pad([1])).fire).toBe(true);
+    expect(r.read(pad([7])).fire).toBe(false); // sigue disparando con B/R2 mantenido
+    expect(r.read(pad([])).fire).toBe(false);
+    expect(r.read(pad([7])).fire).toBe(true);
   });
 });

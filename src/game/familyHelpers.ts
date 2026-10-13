@@ -1,30 +1,29 @@
 import { FAMILY } from '../data/family';
 import { MAZE_TOP, TICK_RATE, TILE } from './constants';
-import { shortestPath, type TileXY } from './level/placement';
+import type { TileXY } from './level/placement';
 
-const HINT_TICKS = 3 * TICK_RATE;
-const DECOY_TICKS = 4 * TICK_RATE;
+/** Duración del señuelo de Aleix. */
+export const DECOY_TICKS = 8 * TICK_RATE;
+const BLAST_TICKS = 28;
 const TAU = Math.PI * 2;
 
 /**
  * Las dos habilidades de los hijos de Pac-Man, una carga por nivel:
- *  - Aina (Pista): marca durante 3 s el camino más corto hasta el objetivo.
- *  - Aleix (Señuelo): deja un juguete que atrae a los fantasmas durante 4 s.
+ *  - Aina (Bomba): una explosión que lanza por los aires a los fantasmas cercanos, alejándolos.
+ *  - Aleix (Señuelo): deja un juguete que atrae a los fantasmas durante 8 s.
  * Aina se recarga al comer una fruta.
  */
 export class FamilyHelpers {
   ainaReady = true;
   aleixReady = true;
-  private hintTicks = 0;
-  private hintPath: TileXY[] = [];
+  private blast: { x: number; y: number; ticks: number } | null = null;
   private decoyTicks = 0;
   private decoyTile: TileXY | null = null;
 
   reset(): void {
     this.ainaReady = true;
     this.aleixReady = true;
-    this.hintTicks = 0;
-    this.hintPath = [];
+    this.blast = null;
     this.decoyTicks = 0;
     this.decoyTile = null;
   }
@@ -38,14 +37,11 @@ export class FamilyHelpers {
     this.ainaReady = true;
   }
 
-  /** Pista hacia `target` desde `from`. Devuelve false si no había carga u objetivo. */
-  useAina(lines: readonly string[], from: TileXY, target: TileXY | null): boolean {
-    if (!this.ainaReady || !target) return false;
-    const path = shortestPath(lines, from, target);
-    if (!path) return false;
+  /** Aina lanza su bomba desde (x, y) en px del laberinto. Devuelve false si no había carga. */
+  useAina(x: number, y: number): boolean {
+    if (!this.ainaReady) return false;
     this.ainaReady = false;
-    this.hintPath = path;
-    this.hintTicks = HINT_TICKS;
+    this.blast = { x, y, ticks: BLAST_TICKS };
     return true;
   }
 
@@ -58,30 +54,35 @@ export class FamilyHelpers {
   }
 
   update(): void {
-    if (this.hintTicks > 0) this.hintTicks--;
+    if (this.blast && --this.blast.ticks <= 0) this.blast = null;
     if (this.decoyTicks > 0) this.decoyTicks--;
   }
 
-  draw(ctx: CanvasRenderingContext2D, frame: number): void {
-    if (this.hintTicks > 0 && this.hintPath.length > 1) this.drawHint(ctx, frame);
-    if (this.decoyTicks > 0 && this.decoyTile) this.drawDecoy(ctx, frame);
+  draw(ctx: CanvasRenderingContext2D, _frame: number): void {
+    if (this.blast) this.drawBlast(ctx, this.blast);
+    if (this.decoyTicks > 0 && this.decoyTile) this.drawDecoy(ctx, _frame);
   }
 
-  private drawHint(ctx: CanvasRenderingContext2D, frame: number): void {
-    const fade = Math.min(1, this.hintTicks / 30);
+  /** Onda expansiva celeste: un anillo que se agranda y un destello en el centro. */
+  private drawBlast(ctx: CanvasRenderingContext2D, b: { x: number; y: number; ticks: number }): void {
+    const t = 1 - b.ticks / BLAST_TICKS;
     const color = FAMILY.aina.color;
+    const y = MAZE_TOP + b.y;
     ctx.save();
     ctx.shadowColor = color;
-    ctx.shadowBlur = ctx.getTransform().a * 3;
-    ctx.fillStyle = color;
-    this.hintPath.forEach((t, i) => {
-      // Una "ola" de brillo recorre el camino.
-      const wave = 0.45 + 0.55 * Math.max(0, Math.sin(i * 0.7 - frame / 4));
-      ctx.globalAlpha = fade * wave;
+    ctx.shadowBlur = ctx.getTransform().a * 5;
+    for (let k = 0; k < 2; k++) {
+      const r = Math.max(0, t * 110 - k * 14);
+      ctx.strokeStyle = `rgba(190,235,255,${(1 - t) * (0.9 - k * 0.3)})`;
+      ctx.lineWidth = 3 - k;
       ctx.beginPath();
-      ctx.arc(t.col * TILE + TILE / 2, MAZE_TOP + t.row * TILE + TILE / 2, i === this.hintPath.length - 1 ? 3.4 : 1.9, 0, TAU);
-      ctx.fill();
-    });
+      ctx.arc(b.x, y, r, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.fillStyle = `rgba(255,255,255,${0.8 * (1 - t) ** 2})`;
+    ctx.beginPath();
+    ctx.arc(b.x, y, 6 + t * 10, 0, TAU);
+    ctx.fill();
     ctx.restore();
   }
 

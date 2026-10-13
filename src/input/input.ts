@@ -29,6 +29,68 @@ const SWIPE_MIN = 18;
  * Unifica teclado, táctil (swipe en toda la pantalla) y gamepad en una
  * "intención" de dirección más una pulsación de acción (start/confirmar).
  */
+/** Lo mínimo que se lee de un mando (compatible con el `Gamepad` del navegador). */
+export interface PadLike {
+  buttons: ReadonlyArray<{ pressed: boolean }>;
+  axes: ReadonlyArray<number>;
+}
+
+export interface PadActions {
+  /** Dirección nueva (se repite al mantener) o null. */
+  dir: Dir | null;
+  press: boolean;
+  pause: boolean;
+  aina: boolean;
+  aleix: boolean;
+  fire: boolean;
+}
+
+/**
+ * Traduce el estado del mando en acciones (solo en el flanco de pulsación):
+ * cruceta o stick → dirección · A → aceptar · Start → pausa · X (2) → Aina (bomba) · Y (3) → Aleix (señuelo)
+ * B (1) o gatillo derecho (7) → disparar. Los botones L1/R1 (4, 5) también lanzan a Aina y a Aleix.
+ */
+export class PadReader {
+  private held: Dir | null = null;
+  private heldTicks = 0;
+  private aDown = false;
+  private startDown = false;
+  private helperDown = [false, false];
+  private fireDown = false;
+
+  read(pad: PadLike): PadActions {
+    const b = (i: number) => pad.buttons[i]?.pressed ?? false;
+    const ax = pad.axes[0] ?? 0;
+    const ay = pad.axes[1] ?? 0;
+    let held: Dir | null = null;
+    if (b(12) || ay < -0.5) held = Dir.Up;
+    else if (b(13) || ay > 0.5) held = Dir.Down;
+    else if (b(14) || ax < -0.5) held = Dir.Left;
+    else if (b(15) || ax > 0.5) held = Dir.Right;
+    // Una dirección mantenida se repite cada 14 ticks (así los menús no saltan 60 veces por segundo).
+    let dir: Dir | null = null;
+    if (held === null) this.heldTicks = 0;
+    else if (held !== this.held || this.heldTicks % 14 === 0) dir = held;
+    if (held !== null) this.heldTicks++;
+    this.held = held;
+
+    const a = b(0);
+    const press = a && !this.aDown;
+    this.aDown = a;
+    const start = b(9);
+    const pause = start && !this.startDown;
+    this.startDown = start;
+    const helpers = [b(2) || b(4), b(3) || b(5)];
+    const aina = helpers[0] && !this.helperDown[0];
+    const aleix = helpers[1] && !this.helperDown[1];
+    this.helperDown = helpers;
+    const fire = b(1) || b(7);
+    const shoot = fire && !this.fireDown;
+    this.fireDown = fire;
+    return { dir, press: press || pause, pause, aina, aleix, fire: shoot };
+  }
+}
+
 export class Input {
   private dir: Dir | null = null;
   /** Sube con cada petición de dirección: permite distinguir una pulsación nueva de una antigua. */
@@ -49,13 +111,8 @@ export class Input {
   private ainaRequested = false;
   private aleixRequested = false;
   private fireRequested = false;
-  private padFireDown = false;
-  private padHeld: Dir | null = null;
-  private padHeldTicks = 0;
-  private padHelperDown = [false, false];
+  private readonly pad = new PadReader();
   private touchStart: { id: number; x: number; y: number } | null = null;
-  private padWasDown = false;
-  private padStartWasDown = false;
 
   constructor(target: HTMLElement) {
     window.addEventListener('keydown', (e) => {
@@ -99,38 +156,13 @@ export class Input {
   poll(): void {
     const pad = navigator.getGamepads?.().find((g) => g && g.connected);
     if (!pad) return;
-    const b = (i: number) => pad.buttons[i]?.pressed ?? false;
-    const ax = pad.axes[0] ?? 0;
-    const ay = pad.axes[1] ?? 0;
-    let held: Dir | null = null;
-    if (b(12) || ay < -0.5) held = Dir.Up;
-    else if (b(13) || ay > 0.5) held = Dir.Down;
-    else if (b(14) || ax < -0.5) held = Dir.Left;
-    else if (b(15) || ax > 0.5) held = Dir.Right;
-    // Una dirección mantenida se repite cada 14 ticks (así los menús no saltan 60 veces por segundo).
-    if (held === null) this.padHeldTicks = 0;
-    else if (held !== this.padHeld || this.padHeldTicks % 14 === 0) this.direction = held;
-    if (held !== null) this.padHeldTicks++;
-    this.padHeld = held;
-
-    const a = b(0);
-    if (a && !this.padWasDown) this.pressed = true;
-    this.padWasDown = a;
-    const start = b(9);
-    if (start && !this.padStartWasDown) {
-      this.pressed = true;
-      this.pauseRequested = true;
-    }
-    this.padStartWasDown = start;
-    // X → Aina (pista), Y → Aleix (señuelo)
-    const helpers = [b(2), b(3)];
-    if (helpers[0] && !this.padHelperDown[0]) this.ainaRequested = true;
-    if (helpers[1] && !this.padHelperDown[1]) this.aleixRequested = true;
-    this.padHelperDown = helpers;
-    // B o gatillo derecho → disparar
-    const fire = b(1) || b(7);
-    if (fire && !this.padFireDown) this.fireRequested = true;
-    this.padFireDown = fire;
+    const act = this.pad.read(pad);
+    if (act.dir !== null) this.direction = act.dir;
+    if (act.press) this.pressed = true;
+    if (act.pause) this.pauseRequested = true;
+    if (act.aina) this.ainaRequested = true;
+    if (act.aleix) this.aleixRequested = true;
+    if (act.fire) this.fireRequested = true;
   }
 
   /** ¿Se pulsó algo desde la última consulta? (para pantallas de título) */

@@ -14,7 +14,6 @@ import { CUTSCENE_SKIP_AFTER, CUTSCENE_TICKS, drawCutscene } from './cutscene';
 import { FamilyHelpers } from './familyHelpers';
 import { arcadeEquivalent } from './level/curve';
 import { buildLevel } from './level/levels';
-import { nearestTile } from './level/placement';
 import type { LevelDef } from './level/schema';
 import { Maze } from './maze/maze';
 import { WallRenderer } from './maze/render';
@@ -64,6 +63,10 @@ const FRUIT_TICKS = 9 * TICK_RATE + 30;
 const MESSAGE_Y = 20 * TILE + 1;
 const MAX_FRUITS_SHOWN = 4;
 const MAX_LIVES_SHOWN = 4;
+/** Bomba de Aina: alcance (px), distancia a la que lanza a los fantasmas y distancia mínima de caída a Pac-Man. */
+const AINA_BLAST_RADIUS = 120;
+const AINA_THROW = 100;
+const AINA_MIN_LANDING = 88;
 
 const MAZE_AREA = { w: SCREEN_W, h: 31 * TILE };
 const MAZE_CENTER = { x: SCREEN_W / 2, y: MAZE_TOP + (31 * TILE) / 2 };
@@ -790,22 +793,43 @@ export class Game {
 
   // ───────────────────────── Ayudantes de la familia ─────────────────────────
 
-  /** A dónde debe apuntar la Pista de Aina según la misión. */
-  private objectiveTarget(): Tile | null {
-    const from = { col: this.pac.col, row: this.pac.row };
-    const fromMission = this.mission.target(from);
-    if (fromMission) return fromMission;
-    const lines = this.levelDef.maze;
-    if (this.mission.def.type === 'HUNT') {
-      const scared = this.ghosts.find((g) => g.frightened && g.state === 'active');
-      if (scared) return { col: Math.min(Math.max(scared.col, 0), 27), row: scared.row };
-      return nearestTile(lines, from, (t) => this.maze.pelletAt(t.col, t.row) === 'energizer');
-    }
-    return nearestTile(lines, from, (t) => this.maze.pelletAt(t.col, t.row) !== undefined);
+  /** Aina: bomba que lanza por los aires a los fantasmas cercanos, alejándolos de Pac-Man (sobre las paredes). */
+  private useAina(): void {
+    if (!this.helpers.useAina(this.pac.x, this.pac.y)) return;
+    this.audio.sfx('explosion');
+    this.launchGhosts();
   }
 
-  private useAina(): void {
-    if (this.helpers.useAina(this.levelDef.maze, { col: this.pac.col, row: this.pac.row }, this.objectiveTarget())) this.audio.sfx('hint');
+  private launchGhosts(): void {
+    const lines = this.levelDef.maze;
+    for (const g of this.ghosts) {
+      if (g.state !== 'active' || g.flight) continue;
+      const dx = g.x - this.pac.x;
+      const dy = g.y - this.pac.y;
+      const d = Math.hypot(dx, dy);
+      if (d > AINA_BLAST_RADIUS) continue;
+      const ang = d < 1 ? this.rng.int(360) * (Math.PI / 180) : Math.atan2(dy, dx);
+      // Punto de caída ideal: más allá del fantasma, en línea desde Pac-Man; luego, la casilla libre más cercana.
+      const wantX = Math.min(this.maze.cols * TILE - 12, Math.max(12, g.x + Math.cos(ang) * AINA_THROW));
+      const wantY = Math.min(this.maze.rows * TILE - 12, Math.max(12, g.y + Math.sin(ang) * AINA_THROW));
+      let best: { col: number; row: number } | null = null;
+      let bestScore = Infinity;
+      for (let row = 1; row < this.maze.rows - 1; row++) {
+        for (let col = 1; col < this.maze.cols - 1; col++) {
+          if (lines[row][col] === '#' || !this.maze.isWalkable(col, row)) continue;
+          if (col >= 9 && col <= 18 && row >= 12 && row <= 18) continue; // casa de los fantasmas
+          const cx = col * TILE + TILE / 2;
+          const cy = row * TILE + TILE / 2;
+          if (Math.hypot(cx - this.pac.x, cy - this.pac.y) < AINA_MIN_LANDING) continue;
+          const score = Math.hypot(cx - wantX, cy - wantY);
+          if (score < bestScore) {
+            bestScore = score;
+            best = { col, row };
+          }
+        }
+      }
+      if (best) g.launch(best.col, best.row);
+    }
   }
 
   private useAleix(): void {
@@ -932,6 +956,7 @@ export class Game {
   private checkCollisions(): boolean {
     for (const g of this.ghosts) {
       if (g.state !== 'active' && g.state !== 'leaving') continue;
+      if (g.flight) continue; // por los aires no toca a nadie
       if (g.col !== this.pac.col || g.row !== this.pac.row) continue;
       if (g.frightened) {
         this.eatGhost(g);
@@ -1056,7 +1081,15 @@ export class Game {
   private drawGhosts(ctx: CanvasRenderingContext2D): void {
     for (const g of this.ghosts) {
       if (this.state === 'ghostEaten' && g === this.eatenGhost) continue;
-      drawGhost(ctx, g.x, MAZE_TOP + g.y, g.name, g.dir, g.anim, this.ghostLook(g));
+      const lift = g.lift;
+      if (lift > 0) {
+        // Sombra en el suelo mientras vuela.
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(g.x, MAZE_TOP + g.y + 5, 5 - lift * 0.06, 1.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      drawGhost(ctx, g.x, MAZE_TOP + g.y - lift, g.name, g.dir, g.anim, this.ghostLook(g));
     }
   }
 

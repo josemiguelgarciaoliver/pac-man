@@ -21,9 +21,9 @@ Abre `/?autostart` para saltarte la pantalla de título.
 
 | Entrada | Acción |
 |---|---|
-| Teclado | Flechas / WASD, `P` o `Esc` pausa, `M` silencio, `Z` Pista de Aina, `X` Señuelo de Aleix |
+| Teclado | Flechas / WASD, `P` o `Esc` pausa, `M` silencio, `Z` Bomba de Aina, `X` Señuelo de Aleix |
 | Táctil | Cruceta virtual o swipe (se cambia con el botón de la barra); botones de pausa, sonido y pantalla completa |
-| Gamepad | D-pad o stick izquierdo, `Start` pausa |
+| Gamepad | D-pad o stick izquierdo, `A` aceptar, `Start` pausa, `X` (o L1) Bomba de Aina, `Y` (o R1) Señuelo de Aleix, `B` o R2 disparar |
 
 ## Estado
 
