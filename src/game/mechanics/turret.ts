@@ -43,7 +43,8 @@ export class TurretMechanic implements Mechanic {
   ) {
     this.period = Math.round(def.periodSeconds * TICK_RATE);
     const used = new Set<string>();
-    const runs: OpenRun[] = rng.shuffle(openRuns(lines));
+    const [lo, hi] = def.clearRows ?? [1, 0];
+    const runs: OpenRun[] = rng.shuffle(openRuns(lines)).filter((r) => !r.tiles.some((t) => t.row >= lo && t.row <= hi));
     for (const run of runs) {
       if (this.turrets.length >= def.count) break;
       if (run.tiles.some((t) => used.has(`${t.col},${t.row}`))) continue;

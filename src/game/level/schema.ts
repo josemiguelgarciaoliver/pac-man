@@ -53,12 +53,16 @@ export const mechanicSchema = z.discriminatedUnion('type', [
     type: z.literal('sawblade'),
     count: z.number().int().min(1).max(6),
     speed: z.number().min(0.3).max(1.4),
+    /** Filas [desde, hasta] por las que no puede pasar este peligro (zona que se deja libre). */
+    clearRows: z.tuple([z.number().int(), z.number().int()]).optional(),
   }),
   /** Torretas en la pared que disparan de lado a lado de un pasillo, avisando antes. */
   z.object({
     type: z.literal('turret'),
     count: z.number().int().min(1).max(4),
     periodSeconds: z.number().min(2).max(12),
+    /** Filas [desde, hasta] por las que no puede pasar este peligro (zona que se deja libre). */
+    clearRows: z.tuple([z.number().int(), z.number().int()]).optional(),
   }),
   /** Puertas que se abren y se cierran solas. */
   z.object({

@@ -44,7 +44,8 @@ export class SawbladeMechanic implements Mechanic {
   ) {
     // Las líneas más largas de pared a pared tienen más margen para esquivar; solo si el laberinto no da
     // para tantas se baja a líneas algo más cortas y, como último recurso, a tramos rectos.
-    const awayFromSpawn = (tiles: TileXY[]) => tiles.every((t) => SPAWNS.every((s) => Math.abs(t.col - s.col) + Math.abs(t.row - s.row) >= SPAWN_CLEARANCE));
+    const [lo, hi] = def.clearRows ?? [1, 0];
+    const awayFromSpawn = (tiles: TileXY[]) => tiles.every((t) => !(t.row >= lo && t.row <= hi) &&  SPAWNS.every((s) => Math.abs(t.col - s.col) + Math.abs(t.row - s.row) >= SPAWN_CLEARANCE));
     const byLength = (runs: { tiles: TileXY[] }[]) => runs.filter((r) => awayFromSpawn(r.tiles)).sort((a, b) => b.tiles.length - a.tiles.length);
     const veryLong = byLength(rng.shuffle(openRuns(lines, MIN_TRACK)));
     const long = byLength(rng.shuffle(openRuns(lines, MIN_TRACK - 2)));

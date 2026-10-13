@@ -16,8 +16,8 @@ type Belt = Extract<MechanicDef, { type: 'conveyor' }>;
 // ── Constructores breves de mecánicas ──
 const belts = (segments: number, extra: Partial<Belt> = {}): MechanicDef => ({ type: 'conveyor', segments, speed: 0.62, ghosts: false, chain: false, ...extra });
 const bombs = (count: number, fuseSeconds = 3, radius = 2, area: 'any' | 'bottom' = 'any'): MechanicDef => ({ type: 'bomb', count, fuseSeconds, radius, area });
-const saws = (count: number, speed = 0.6): MechanicDef => ({ type: 'sawblade', count, speed });
-const turrets = (count: number, periodSeconds = 5): MechanicDef => ({ type: 'turret', count, periodSeconds });
+const saws = (count: number, speed = 0.6, clearRows?: [number, number]): MechanicDef => ({ type: 'sawblade', count, speed, clearRows });
+const turrets = (count: number, periodSeconds = 5, clearRows?: [number, number]): MechanicDef => ({ type: 'turret', count, periodSeconds, clearRows });
 const gates = (count: number, openSeconds = 6, closedSeconds = 4): MechanicDef => ({ type: 'gate', count, openSeconds, closedSeconds });
 const portals = (pairs: number, link: 'any' | 'topBottom' = 'any'): MechanicDef => ({ type: 'teleport', pairs, link });
 const spikes = (count: number, periodSeconds = 4.5): MechanicDef => ({ type: 'spikes', count, periodSeconds });
@@ -130,7 +130,7 @@ export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
   77: { mechanics: [turrets(3, 4), shrooms(2, ['turbo', 'dark', 'mirror'], 7)] },
   78: { mission: { type: 'RESCUE' }, mechanics: [portals(2), ufo(18, 8, 2.6)] },
   79: { mechanics: [phenomenon('mirror', 13, 7), portals(1)] },
-  80: { mechanics: [turrets(4, 3.5), saws(3, 0.9), phenomenon('rotate', 18, 7), ufo(16, 9, 2.2)] },
+  80: { mechanics: [turrets(4, 3.5, [21, 27]), saws(3, 0.9, [21, 27]), phenomenon('rotate', 18, 7), ufo(16, 9, 2.2)] },
 
   // ── Mundo 9 — Castillo Fantasma: puertas, ballestas y espejos ──
   81: { mechanics: [gates(4, 5, 4)] },

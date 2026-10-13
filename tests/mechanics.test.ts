@@ -1020,3 +1020,23 @@ describe('reparto de objetos por todo el laberinto', () => {
     }
   });
 });
+
+describe('nivel 80: centro de abajo sin trampas', () => {
+  it('ninguna torreta ni sierra pasa por las filas 21–27', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const def = buildLevel(80);
+      const mechs = createMechanics(def.mechanics, def.maze, createRng(seed));
+      for (const m of mechs) {
+        const own = m as unknown as { turrets?: unknown[]; saws?: { from: { row: number }; to: { row: number } }[] };
+        for (const t of (own.turrets ?? []) as { wall: { y: number }; dr: number; length: number }[]) {
+          // La línea de tiro (sin contar la casilla de pared de la que sale) no toca las filas 21–27.
+          const ys = [t.wall.y, t.wall.y + t.dr * t.length];
+          const lo = Math.min(...ys);
+          const hi = Math.max(...ys);
+          expect(hi < 22 * 8 || lo >= 28 * 8, `torreta ${JSON.stringify(t.wall)}`).toBe(true);
+        }
+        for (const w of own.saws ?? []) for (const row of [w.from.row, w.to.row]) expect(row < 21 || row > 27, `sierra fila ${row}`).toBe(true);
+      }
+    }
+  });
+});
