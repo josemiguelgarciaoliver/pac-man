@@ -1,6 +1,6 @@
 import type { PacMan } from '../actors/pacman';
 import { MAZE_TOP, TICK_RATE, TILE } from '../constants';
-import { beltRuns, type TileXY } from '../level/placement';
+import { beltRuns, dotTiles, type TileXY } from '../level/placement';
 import type { MechanicDef } from '../level/schema';
 import type { Rng } from '../random';
 import { centerX, centerY } from './geometry';
@@ -31,7 +31,7 @@ export class SpikesMechanic implements Mechanic {
     this.period = Math.round(def.periodSeconds * TICK_RATE);
     const used: TileXY[] = [];
     // Casillas sueltas de tramos rectos: se evita amontonarlas y la zona de salida de Pac-Man.
-    const candidates = rng.shuffle(beltRuns(lines).flatMap((r) => r.tiles));
+    const candidates = [...rng.shuffle(beltRuns(lines).flatMap((r) => r.tiles)), ...rng.shuffle(dotTiles(lines))]; // sin tramos rectos (laberintos abiertos) vale cualquier casilla
     for (const tile of candidates) {
       if (this.traps.length >= def.count) break;
       if (used.some((u) => Math.abs(u.col - tile.col) + Math.abs(u.row - tile.row) < 4)) continue;

@@ -16,6 +16,7 @@ export const SPECIAL_LAYOUTS: Record<number, SpecialLayout> = {
   27: { kind: 'pillars', title: 'LA NAVE DE POSTES' },
   34: { kind: 'lake', title: 'EL LAGO HELADO' },
   46: { kind: 'hall', title: 'LA SALA DE COLUMNAS' },
+  50: { kind: 'pyramid', title: 'LA GRAN PIRAMIDE' },
   58: { kind: 'asteroids', title: 'EL ARRECIFE ABIERTO', seed: 58 },
   66: { kind: 'crater', title: 'EL CRATER' },
   77: { kind: 'asteroids', title: 'CAMPO DE ASTEROIDES', seed: 77 },

@@ -8,7 +8,7 @@ import { REQUIRED_OPEN, reachableTiles } from './generator';
  * Conservan la banda central del original (casa de fantasmas y túnel) y los bordes, pero el
  * resto cambia por completo: una arena sin paredes interiores, un anillo, bosques de postes…
  */
-export type SpecialKind = 'arena' | 'ring' | 'pillars' | 'hall' | 'throne' | 'grid' | 'lake' | 'crater' | 'asteroids';
+export type SpecialKind = 'arena' | 'ring' | 'pillars' | 'hall' | 'throne' | 'grid' | 'lake' | 'crater' | 'asteroids' | 'pyramid';
 
 const MID = 13;
 const CENTER_BAND = ORIGINAL_MAZE.slice(9, 20);
@@ -89,6 +89,18 @@ function carve(grid: Grid, kind: SpecialKind, rng: Rng): void {
       block(grid, 3, 26, 4, 3);
       block(grid, 9, 25, 3, 2);
       break;
+    case 'pyramid':
+      // El laberinto es una pirámide escalonada: arriba, la parte jugable se estrecha hasta la cima
+      // (las esquinas se rellenan de piedra); abajo, una pirámide de roca maciza apuntando al cielo.
+      for (let r = 1; r <= 8; r++) {
+        const edge = 13 - r;
+        for (let c = 1; c < edge; c++) {
+          grid[r][c] = true;
+          grid[r][MAZE_COLS - 1 - c] = true;
+        }
+      }
+      for (let r = 24; r <= 27; r++) block(grid, 12 - (r - 24) * 2, r, 4 + (r - 24) * 4, 1);
+      break;
     case 'asteroids': {
       // Rocas sueltas de una o dos casillas, repartidas con semilla.
       for (let i = 0; i < 22; i++) {
@@ -134,7 +146,7 @@ export function buildSpecialMaze(kind: SpecialKind, seed = 1): string[] {
   const rng = createRng(seed * 8191 + 17);
   const grid = blank();
   carve(grid, kind, rng);
-  if (kind !== 'arena') breakOpenSpaces(grid); // la "sala sin paredes" es justo eso: sin paredes
+  if (kind !== 'arena' && kind !== 'pyramid') breakOpenSpaces(grid); // la "sala sin paredes" es justo eso: sin paredes
   const lines: string[] = [];
   for (let r = 0; r < MAZE_ROWS; r++) {
     if (r >= 9 && r <= 19) {
@@ -150,7 +162,8 @@ export function buildSpecialMaze(kind: SpecialKind, seed = 1): string[] {
     lines.push(row);
   }
   // Energizers en las esquinas y salida de Pac-Man sin puntos, como el original.
-  for (const [c, r] of [[1, 3], [26, 3], [1, 23], [26, 23]] as const) lines[r] = lines[r].slice(0, c) + 'o' + lines[r].slice(c + 1);
+  const energizers = kind === 'pyramid' ? ([[10, 3], [17, 3], [1, 23], [26, 23]] as const) : ([[1, 3], [26, 3], [1, 23], [26, 23]] as const);
+  for (const [c, r] of energizers) lines[r] = lines[r].slice(0, c) + 'o' + lines[r].slice(c + 1);
   for (const c of [13, 14]) lines[23] = lines[23].slice(0, c) + ' ' + lines[23].slice(c + 1);
   return lines;
 }
@@ -175,6 +188,6 @@ export function validateSpecialMaze(lines: readonly string[]): string[] {
   }
   if (energizers !== 4) errors.push(`energizers: ${energizers} (deben ser 4)`);
   if (dots + energizers < 150 || dots + energizers > 330) errors.push(`puntos: ${dots + energizers} (rango 150–330)`);
-  for (const [c, r] of REQUIRED_OPEN) if (!reach.has(r * MAZE_COLS + c)) errors.push(`casilla obligatoria cerrada en (${c},${r})`);
+  for (const [c, r] of REQUIRED_OPEN) if (lines[r][c] !== '#' && !reach.has(r * MAZE_COLS + c)) errors.push(`casilla obligatoria cerrada en (${c},${r})`);
   return errors;
 }
