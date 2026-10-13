@@ -3,6 +3,7 @@ import type { MechanicDef } from '../level/schema';
 import type { Rng } from '../random';
 import { AnkhMechanic } from './ankh';
 import { BlasterMechanic } from './blaster';
+import { BooMechanic } from './boo';
 import { BombMechanic } from './bomb';
 import { BoostMechanic } from './boost';
 import { CompanionMechanic } from './companion';
@@ -57,6 +58,8 @@ export function createMechanics(defs: readonly MechanicDef[], lines: readonly st
         return new SpikesMechanic(def, lines, rng);
       case 'mushroom':
         return new MushroomMechanic(def, lines, rng, avoid);
+      case 'boo':
+        return new BooMechanic(def, lines, rng);
       case 'ufo':
         return new UfoMechanic(def, lines, rng);
       case 'lava':

@@ -88,6 +88,14 @@ export const mechanicSchema = z.discriminatedUnion('type', [
     /** Radio de la salpicadura en casillas. */
     splash: z.number().int().min(1).max(3).default(1),
   }),
+  /** Fantasma gigante: atraviesa paredes y persigue a Pac-Man; se paraliza si Pac-Man lo mira. Se va al rato. */
+  z.object({
+    type: z.literal('boo'),
+    /** Segundos medios entre visitas. */
+    everySeconds: z.number().min(8).max(40),
+    /** Segundos que persigue cada vez. */
+    staySeconds: z.number().min(5).max(30).default(12),
+  }),
   /** Platillo volante: visita el laberinto, vuela sobre las paredes y dispara a Pac-Man; bombas y pistola lo derriban. */
   z.object({
     type: z.literal('ufo'),

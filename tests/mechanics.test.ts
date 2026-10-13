@@ -1040,3 +1040,53 @@ describe('nivel 80: centro de abajo sin trampas', () => {
     }
   });
 });
+
+describe('fantasma gigante del castillo', () => {
+  const castle = [83, 85, 87, 89, 90];
+  type Boo = { present: boolean; isFrozen: boolean; position: { x: number; y: number }; phaseName: string; summon(env: MechanicEnv): void };
+  const booOf = (s: ReturnType<typeof setup>) => s.mechanics.find((m) => m.kind === 'boo') as unknown as Boo & { x: number; y: number };
+
+  it('solo aparece en algunos niveles del mundo 9', () => {
+    for (let n = 1; n <= 100; n++) expect(buildLevel(n).mechanics.some((m) => m.type === 'boo'), `nivel ${n}`).toBe(castle.includes(n));
+  });
+
+  it('persigue atravesando paredes, se paraliza si Pac-Man lo mira y avanza si le da la espalda', () => {
+    const s = setup(83);
+    const b = booOf(s);
+    s.place(14, 23);
+    s.pac.dir = Dir.Left;
+    b.summon(s.env);
+    s.run(100); // termina de aparecer
+    expect(b.phaseName).toBe('chase');
+    // Lo coloca a la espalda de Pac-Man (Pac mira a la izquierda; el fantasma está a la derecha).
+    (b as unknown as { x: number; y: number }).x = s.pac.x + 60;
+    (b as unknown as { x: number; y: number }).y = s.pac.y;
+    const x0 = b.position.x;
+    s.run(30);
+    expect(b.isFrozen).toBe(false);
+    expect(b.position.x).toBeLessThan(x0);
+    // Ahora Pac-Man se da la vuelta y lo mira: se queda quieto.
+    s.pac.dir = Dir.Right;
+    const x1 = b.position.x;
+    s.run(30);
+    expect(b.isFrozen).toBe(true);
+    expect(b.position.x).toBe(x1);
+  });
+
+  it('mata si toca a Pac-Man (aunque esté paralizado), pero no mientras aparece, y se va al rato', () => {
+    const s = setup(83);
+    const b = booOf(s);
+    s.place(14, 23);
+    s.pac.dir = Dir.Left;
+    b.summon(s.env);
+    (b as unknown as { x: number; y: number }).x = s.pac.x + 3;
+    (b as unknown as { x: number; y: number }).y = s.pac.y;
+    expect(s.hits()).toBe(false); // aparece: inofensivo
+    s.run(100);
+    (b as unknown as { x: number; y: number }).x = s.pac.x + 3;
+    (b as unknown as { x: number; y: number }).y = s.pac.y;
+    expect(s.hits()).toBe(true);
+    s.run(60 * 40, () => !b.present);
+    expect(b.present).toBe(false);
+  });
+});
