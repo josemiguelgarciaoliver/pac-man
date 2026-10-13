@@ -342,7 +342,7 @@ Cada mecánica es un *plugin* (`src/game/mechanics/`) descrito por datos en el n
 | Elemento | Qué hace | Aparece en |
 |---|---|---|
 | **Cintas transportadoras** | Empujan a Pac-Man (y opcionalmente a los fantasmas); pueden invertirse con aviso parpadeante o encadenarse en sentidos alternos | M3, M6 (corrientes), M10 |
-| **Bombas** | Se arman al acercarse Pac-Man, muestran la zona de peligro y la cuenta atrás, y estallan: **derriban paredes** (abren atajos), matan a Pac-Man si sigue dentro y convierten en ojos a los fantasmas | M1 (tutorial), M4 (deshielo), M5 (muros falsos), M7 (derrumbes), M9, M10 |
+| **Bombas** | Se arman al acercarse Pac-Man, muestran un círculo de peligro y la cuenta atrás, y estallan: **derriban paredes** (abren atajos) y su onda expansiva **mata a Pac-Man y a los fantasmas** que estén a menos de ~3,6 casillas, aunque haya paredes de por medio | M1 (tutorial), M4 (deshielo), M5 (muros falsos), M7 (derrumbes), M9, M10 |
 | **Sierras** | Discos con dientes que patrullan un pasillo de punta a punta sobre su carril | M3, M5 (escarabajos), M6 (medusas), M7 (rocas), M8 (drones), M9, M10 |
 | **Torretas** | Empotradas en la pared, disparan **de pared a pared** a lo largo de un pasillo; la línea de tiro parpadea antes del disparo | M3, M4, M5 (dardos), M6, M7, M8 (láseres), M9 (ballestas), M10 |
 | **Paredes móviles / puertas** | Bloques de piedra que se deslizan para cerrar un pasillo y lo reabren; nunca cierran encima de alguien | M2 (enredaderas), M3, M6 (marea), M9 (rastrillos) |
@@ -370,7 +370,7 @@ Cada mecánica es un *plugin* (`src/game/mechanics/`) descrito por datos en el n
 
 | Objeto | Efecto |
 |---|---|
-| **Zapatillas rojas** | Supervelocidad (×1,5) durante **1 minuto**, con estela. Un nivel de cada cinco (4, 9, 14…) y el 100 |
+| **Zapatillas rojas** | Supervelocidad (×2,1) durante **1 minuto**, con estela. Un nivel de cada cinco (4, 9, 14…) y el 100 |
 | **Blaster** | Pac-Man puede **disparar** durante 1 minuto (Espacio / botón FUEGO / botón B del mando); cada disparo convierte en ojos al primer fantasma que alcanza. Niveles 7, 12, 17… y el 100 |
 | **Miniaturas de Aleix y Aina** | Su insignia invoca al hijo en miniatura, que **caza fantasmas** unos segundos (Aleix: rápido y va a por el más cercano a él, 10 s; Aina: más lenta, protege a Pac-Man, 14 s). La cara se puede sustituir por una foto: `public/assets/faces/aleix.png` y `aina.png` |
 | **Trampa de furia** | Una placa roja que, al pisarla, enfurece a **un** fantasma al azar con supervelocidad unos segundos (aura roja y aviso con su nombre) |
