@@ -355,7 +355,8 @@ describe('supervelocidad', () => {
     s.place(tile.col, tile.row);
     s.run(1);
     expect(s.view.has('boost')).toBe(true);
-    expect(s.view.speedFactor).toBeGreaterThanOrEqual(2);
+    expect(s.view.speedFactor).toBeGreaterThanOrEqual(1.6);
+    expect(s.view.speedFactor).toBeLessThan(2); // supervelocidad, pero controlable
     expect(s.view.secondsLeft('boost')).toBe(60);
     expect(s.popups).toContain('SUPERVELOCIDAD');
     // Ya no está: pasar otra vez no vuelve a dar nada.

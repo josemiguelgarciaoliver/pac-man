@@ -136,7 +136,7 @@ export class ViewEffects {
 
   /** Multiplicador de la velocidad de Pac-Man. */
   get speedFactor(): number {
-    if (this.has('boost')) return 2.1;
+    if (this.has('boost')) return 1.7;
     return this.has('turbo') ? 1.3 : 1;
   }
 }
