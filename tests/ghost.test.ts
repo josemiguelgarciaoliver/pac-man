@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ORIGINAL_MAZE, ORIGINAL_PAC_SPAWN } from '../src/data/mazes/original';
 import { HOUSE_DOOR_TILE, SCATTER_TARGETS, chaseTarget } from '../src/game/actors/ai';
-import { Ghost, type GhostState, type MoveEnv } from '../src/game/actors/ghost';
+import { Ghost, REVIVE_TICKS, type GhostState, type MoveEnv } from '../src/game/actors/ghost';
 import { Dir } from '../src/game/constants';
 import { Maze } from '../src/game/maze/maze';
 import { createRng } from '../src/game/random';
@@ -249,5 +249,25 @@ describe('movimiento por casillas con velocidades fraccionarias', () => {
         expect(maze.charAt(g.col, g.row), `velocidad ${speed}, tick ${t}`).not.toBe('#');
       }
     }
+  });
+});
+
+describe('regeneración de los fantasmas comidos', () => {
+  it('tras llegar a casa esperan unos segundos dentro antes de volver a salir', () => {
+    const maze = new Maze(ORIGINAL_MAZE, ORIGINAL_PAC_SPAWN);
+    const env: MoveEnv = { maze, target: HOUSE_DOOR_TILE, rng: createRng(5), houseSpeed: 0.5 };
+    const g = new Ghost('blinky');
+    g.initNav(env);
+    g.state = 'eaten';
+    let enteredAt = -1;
+    let leftAt = -1;
+    for (let t = 0; t < 5000 && leftAt < 0; t++) {
+      g.move(env, 1.2);
+      if (enteredAt < 0 && (g.state as GhostState) === 'house') enteredAt = t;
+      if (enteredAt >= 0 && (g.state as GhostState) === 'leaving') leftAt = t;
+    }
+    expect(enteredAt).toBeGreaterThan(0);
+    expect(leftAt - enteredAt).toBeGreaterThanOrEqual(REVIVE_TICKS - 1);
+    expect(g.frightened).toBe(false);
   });
 });

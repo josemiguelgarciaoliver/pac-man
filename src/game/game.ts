@@ -36,7 +36,9 @@ type State = 'title' | 'cutscene' | 'ready' | 'play' | 'ghostEaten' | 'dying' | 
 
 const READY_TICKS = 2 * TICK_RATE;
 /** La tarjeta de nivel se ve antes del "READY!" final. */
-const CARD_TICKS = 150;
+const CARD_TICKS = 270;
+/** Tiempo (ticks) antes de poder saltarse la tarjeta de nivel con una pulsación. */
+const CARD_SKIP_AFTER = 75;
 const CLEAR_TICKS = 3 * TICK_RATE;
 const GHOST_EATEN_TICKS = TICK_RATE;
 const DEATH_FREEZE = 45;
@@ -46,7 +48,8 @@ const GAMEOVER_TICKS = 3 * TICK_RATE;
 const VICTORY_TICKS = 10 * TICK_RATE;
 const FLASH_PERIOD = 14;
 const HOUSE_SPEED = 0.5;
-const EATEN_SPEED = (BASE_SPEED * 1.6) / TICK_RATE;
+/** Velocidad de los ojos que vuelven a casa: algo más rápida que un fantasma normal, no el doble. */
+const EATEN_SPEED = (BASE_SPEED * 0.95) / TICK_RATE;
 const HIGH_KEY = 'pacman.highscore';
 const DIFFICULTY_KEY = 'pacman.difficulty';
 const FRUIT_TILE = { col: 13, row: 17 };
@@ -130,6 +133,8 @@ export class Game {
   private introJingle = false;
   /** Tarjeta de inicio de nivel visible durante el "ready". */
   private cardActive = false;
+  /** Duración total (ticks) con la que empezó el "ready" actual. */
+  private readyStart = 0;
   private timeUp = false;
   /** ?quick: sin tarjeta de nivel ni espera de la melodía (pruebas y capturas). */
   private quick = false;
@@ -210,6 +215,8 @@ export class Game {
         this.menus.update(this.menuInput(pressed, pauseRequested));
         break;
       case 'ready':
+        // La tarjeta de nivel se puede saltar con una pulsación pasado un momento.
+        if (pressed && this.cardActive && this.timer > READY_TICKS && this.readyStart - this.timer >= CARD_SKIP_AFTER) this.timer = READY_TICKS;
         if (--this.timer <= 0) this.state = 'play';
         break;
       case 'play':
@@ -391,6 +398,8 @@ export class Game {
     this.audio.setAmbient(null);
     this.state = 'clear';
     this.timer = CLEAR_TICKS;
+    // Al completar el nivel se acaban de golpe la oscuridad, el giro y demás efectos de vista.
+    this.view.clear();
     this.checkpointJustSaved = false;
     const done = this.levelDef.level;
     const mission = this.levelDef.mission;
@@ -520,11 +529,15 @@ export class Game {
     this.timer = this.quick ? 10 : newLevel ? CARD_TICKS + READY_TICKS : READY_TICKS;
     if (this.introJingle) {
       this.introJingle = false;
-      if (this.quick) return;
+      if (this.quick) {
+        this.readyStart = this.timer;
+        return;
+      }
       this.audio.play('start');
       // Si la melodía ya cargó, la espera dura lo que ella (≈4 s en el arcade).
       this.timer = Math.max(this.timer, Math.round(this.audio.duration('start') * TICK_RATE));
     }
+    this.readyStart = this.timer;
   }
 
   private nextLevel(): void {
@@ -776,7 +789,8 @@ export class Game {
   private nextInHouse(): Ghost | undefined {
     for (const name of HOUSE_ORDER) {
       const g = this.ghost(name);
-      if (g.state === 'house') return g;
+      // Los fantasmas que se están regenerando salen por su cuenta, no por los contadores de puntos.
+      if (g.state === 'house' && g.reviveTicks === 0) return g;
     }
     return undefined;
   }

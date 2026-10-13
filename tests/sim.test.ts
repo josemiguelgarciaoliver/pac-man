@@ -246,6 +246,42 @@ describe('progresión en el juego (Fase 6)', () => {
     expect(JSON.parse(storage.getItem('pacman.progress')!).unlocked).toBe(4);
   });
 
+  it('completar el nivel apaga al instante la oscuridad y el resto de efectos de vista', () => {
+    const { game } = newGame(3, memoryStorage());
+    const g = game as unknown as Run & { view: { add(k: string, s: number): void; update(): void; darkAmount: number; active(): unknown[] } };
+    g.view.add('dark', 30);
+    for (let i = 0; i < 80; i++) g.view.update();
+    expect(g.view.darkAmount).toBeGreaterThan(0.9);
+    g.completeLevel();
+    expect(g.view.darkAmount).toBe(0);
+    expect(g.view.active()).toEqual([]);
+  });
+
+  it('la tarjeta de nivel dura más y se puede saltar con una pulsación pasado un momento', () => {
+    const { game, input, probe } = newGame(4, memoryStorage());
+    expect(probe.state).toBe('ready');
+    let ticks = 0;
+    while (probe.state === 'ready' && ticks < 2000) {
+      game.update();
+      ticks++;
+    }
+    expect(ticks).toBeGreaterThan(60 * 6); // tarjeta (4,5 s) + READY (2 s) como mínimo
+
+    const other = newGame(4, memoryStorage());
+    other.input.press();
+    other.game.update(); // demasiado pronto: no se salta
+    expect(other.probe.state).toBe('ready');
+    for (let i = 0; i < 80; i++) other.game.update();
+    other.input.press();
+    let after = 0;
+    while (other.probe.state === 'ready' && after < 2000) {
+      other.game.update();
+      after++;
+    }
+    expect(after).toBeLessThan(60 * 3); // saltó la tarjeta y solo quedaba el READY
+    void input;
+  });
+
   it('perder una vida en el nivel deja solo una estrella', () => {
     const { game } = newGame(3, memoryStorage());
     const g = game as unknown as Run;

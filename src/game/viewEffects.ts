@@ -40,8 +40,13 @@ export class ViewEffects {
     this.left.set(kind, Math.max(ticks, this.left.get(kind) ?? 0));
   }
 
+  /** Quita todos los efectos y devuelve la vista a la normalidad al instante (sin desvanecerse). */
   clear(): void {
     this.left.clear();
+    this.angle = 0;
+    this.flip = 1;
+    this.wobble = 0;
+    this.dark = 0;
   }
 
   has(kind: EffectKind): boolean {

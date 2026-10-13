@@ -14,6 +14,8 @@ export const HOUSE_Y = 14 * TILE + 4;
 export const EXIT_Y = 11 * TILE + 4;
 const BOB = 4;
 const BOB_SPEED = 0.5;
+/** Ticks que un fantasma comido tarda en regenerarse dentro de la casa antes de volver a salir. */
+export const REVIVE_TICKS = 3 * 60;
 
 const START: Record<GhostName, { x: number; y: number }> = {
   blinky: { x: HOUSE_X, y: EXIT_Y },
@@ -53,6 +55,8 @@ export class Ghost {
   frightened = false;
   /** Nivel de Cruise Elroy (solo Blinky). */
   elroy = 0;
+  /** Ticks que le quedan para regenerarse en la casa tras ser comido (0 = no se está regenerando). */
+  reviveTicks = 0;
   anim = 0;
   private reversePending = false;
   private bobDir = 1;
@@ -75,6 +79,7 @@ export class Ghost {
     this.y = s.y;
     this.frightened = false;
     this.elroy = 0;
+    this.reviveTicks = 0;
     this.anim = 0;
     this.reversePending = false;
     this.bobDir = this.name === 'inky' ? 1 : -1;
@@ -103,6 +108,8 @@ export class Ghost {
     switch (this.state) {
       case 'house':
         this.bob(env.houseSpeed);
+        // Regenerándose tras ser comido: espera un rato y sale por su cuenta (sin esperar a los contadores).
+        if (this.reviveTicks > 0 && --this.reviveTicks === 0) this.state = 'leaving';
         break;
       case 'leaving':
         this.leave(env, env.houseSpeed);
@@ -156,7 +163,8 @@ export class Ghost {
     this.y += speed;
     if (this.y >= HOUSE_Y) {
       this.y = HOUSE_Y;
-      this.state = 'leaving';
+      this.state = 'house';
+      this.reviveTicks = REVIVE_TICKS;
       this.frightened = false;
     }
   }

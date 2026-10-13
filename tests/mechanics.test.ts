@@ -601,3 +601,24 @@ describe('ajustes de equilibrio', () => {
     expect(mud.pacSpeedFactor(s.pac)).toBeLessThanOrEqual(0.4);
   });
 });
+
+describe('efectos de vista al terminar el nivel', () => {
+  it('clear() apaga la oscuridad, el giro y el espejo al instante', () => {
+    const v = new ViewEffects();
+    v.add('dark', 20);
+    v.add('rotate', 20);
+    v.add('mirror', 20);
+    v.add('wobble', 20);
+    for (let i = 0; i < 100; i++) v.update();
+    expect(v.darkAmount).toBeGreaterThan(0.9);
+    expect(v.wobbleAmount).toBeGreaterThan(0.9);
+    v.clear();
+    expect(v.darkAmount).toBe(0);
+    expect(v.wobbleAmount).toBe(0);
+    expect(v.active()).toEqual([]);
+    expect(v.mapInput(Dir.Up)).toBe(Dir.Up);
+    // Y no se reactiva solo en los ticks siguientes.
+    for (let i = 0; i < 30; i++) v.update();
+    expect(v.darkAmount).toBe(0);
+  });
+});
