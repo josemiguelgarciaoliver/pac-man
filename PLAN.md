@@ -344,7 +344,7 @@ Cada mecánica es un *plugin* (`src/game/mechanics/`) descrito por datos en el n
 |---|---|---|
 | **Cintas transportadoras** | Empujan a Pac-Man (y opcionalmente a los fantasmas); pueden invertirse con aviso parpadeante o encadenarse en sentidos alternos | M3, M6 (corrientes), M10 |
 | **Bombas** | Se arman al acercarse Pac-Man, muestran un círculo de peligro y la cuenta atrás, y estallan: **derriban paredes** (abren atajos) y su onda expansiva **mata a Pac-Man y a los fantasmas** que estén a menos de ~3,6 casillas, aunque haya paredes de por medio | M1 (tutorial), M4 (deshielo), M5 (muros falsos), M7 (derrumbes), M9, M10 |
-| **Sierras** | Discos con dientes que patrullan una **línea larga de pared a pared** (≥ 10 casillas, nunca cerca de la salida de Pac-Man) sobre su carril | M3, M5 (escarabajos), M6 (medusas), M7 (rocas), M8 (drones), M9, M10 |
+| **Sierras** | Discos con dientes que patrullan una **línea larga de pared a pared** (≥ 10 casillas, nunca cerca de la salida de Pac-Man) sobre su carril, **lo más separadas posible entre sí** | M3, M5 (escarabajos), M6 (medusas), M7 (rocas), M8 (drones), M9, M10 |
 | **Torretas** | Empotradas en la pared, disparan **de pared a pared** a lo largo de un pasillo; la línea de tiro parpadea antes del disparo | M3, M4, M5 (dardos), M6, M7, M8 (láseres), M9 (ballestas), M10 |
 | **Paredes móviles / puertas** | Bloques de piedra que se deslizan para cerrar un pasillo y lo reabren; nunca cierran encima de alguien | M2 (enredaderas), M3, M6 (marea), M9 (rastrillos) |
 | **Pinchos** | Placa con agujeros que avisa y saca pinchos con ritmo (prensas, géiseres…) | M1, M3, M4, M5, M7, M9, M10 |

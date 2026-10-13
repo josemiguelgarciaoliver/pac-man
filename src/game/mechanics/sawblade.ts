@@ -13,6 +13,8 @@ const RADIUS = 5.2;
 const MIN_TRACK = 10;
 /** Distancia mínima (Manhattan, casillas) entre la pista y la salida de Pac-Man. */
 const SPAWN_CLEARANCE = 6;
+/** Distancias mínimas (casillas) entre pistas, de la más deseable a la más relajada. */
+const SAW_GAPS = [12, 10, 8, 6, 4, 3];
 const SPAWNS: TileXY[] = [
   { col: 13, row: 23 },
   { col: 14, row: 23 },
@@ -40,25 +42,45 @@ export class SawbladeMechanic implements Mechanic {
     lines: readonly string[],
     rng: Rng,
   ) {
-    const used: TileXY[] = [];
-    // Primero las líneas más largas de pared a pared (tienen margen para esquivar); si no bastan, tramos rectos.
+    // Las líneas más largas de pared a pared tienen más margen para esquivar; solo si el laberinto no da
+    // para tantas se baja a líneas algo más cortas y, como último recurso, a tramos rectos.
     const awayFromSpawn = (tiles: TileXY[]) => tiles.every((t) => SPAWNS.every((s) => Math.abs(t.col - s.col) + Math.abs(t.row - s.row) >= SPAWN_CLEARANCE));
-    const long = rng
-      .shuffle(openRuns(lines, MIN_TRACK))
-      .filter((r) => awayFromSpawn(r.tiles))
-      .sort((a, b) => b.tiles.length - a.tiles.length);
+    const byLength = (runs: { tiles: TileXY[] }[]) => runs.filter((r) => awayFromSpawn(r.tiles)).sort((a, b) => b.tiles.length - a.tiles.length);
+    const veryLong = byLength(rng.shuffle(openRuns(lines, MIN_TRACK)));
+    const long = byLength(rng.shuffle(openRuns(lines, MIN_TRACK - 2)));
     const short = rng.shuffle(beltRuns(lines)).filter((r) => awayFromSpawn(r.tiles));
-    for (const run of [...long, ...short]) {
-      if (this.saws.length >= def.count) break;
-      if (run.tiles.some((t) => used.some((u) => Math.abs(u.col - t.col) + Math.abs(u.row - t.row) < 3))) continue;
+    const pools: { tiles: TileXY[] }[][] = [veryLong, long, [...long, ...short]];
+
+    // Y se reparten lo más separadas posible: se prueba con la mayor distancia entre pistas y se va relajando.
+    const gapBetween = (a: TileXY[], b: TileXY[]) => Math.min(...a.flatMap((p) => b.map((q) => Math.abs(p.col - q.col) + Math.abs(p.row - q.row))));
+    let chosen: { tiles: TileXY[] }[] = [];
+    search: for (const pool of pools) {
+      for (const gap of SAW_GAPS) {
+        const picked: { tiles: TileXY[] }[] = [];
+        for (const run of pool) {
+          if (picked.length >= def.count) break;
+          if (picked.every((p) => gapBetween(p.tiles, run.tiles) >= gap)) picked.push(run);
+        }
+        if (picked.length > chosen.length) chosen = picked;
+        if (picked.length >= def.count) {
+          chosen = picked;
+          break search;
+        }
+      }
+    }
+    this.gap = chosen.length < 2 ? Infinity : Math.min(...chosen.flatMap((a, i) => chosen.slice(i + 1).map((b) => gapBetween(a.tiles, b.tiles))));
+
+    for (const run of chosen) {
       const from = run.tiles[0];
       const to = run.tiles[run.tiles.length - 1];
       const length = (run.tiles.length - 1) * TILE;
       const startS = rng.float() * length;
       this.saws.push({ from, to, s: startS, dir: rng.chance(0.5) ? 1 : -1, length, startS });
-      used.push(...run.tiles);
     }
   }
+
+  /** Distancia mínima (en casillas) entre las pistas de dos sierras distintas. */
+  readonly gap: number;
 
   get tracks(): { from: TileXY; to: TileXY }[] {
     return this.saws.map((s) => ({ from: s.from, to: s.to }));

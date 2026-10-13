@@ -733,3 +733,22 @@ describe('sierras de línea larga', () => {
     expect(danger / ticks).toBeLessThan(0.15);
   });
 });
+
+describe('sierras separadas entre sí', () => {
+  const withSaws = Array.from({ length: 100 }, (_, i) => i + 1).filter((n) => buildLevel(n).mechanics.some((m) => m.type === 'sawblade' && m.count > 1));
+
+  it('el nivel 30 (mundo 3, nivel 10) tiene sus tres sierras bien alejadas', () => {
+    const s = setup(30);
+    const saws = s.mechanics.find((m) => m instanceof SawbladeMechanic) as SawbladeMechanic;
+    expect(saws.count).toBe(3);
+    expect(saws.gap).toBeGreaterThanOrEqual(7); // antes podían quedar a solo 3 casillas
+  });
+
+  it('en todos los niveles con varias sierras las pistas quedan separadas al menos 3 casillas', () => {
+    expect(withSaws.length).toBeGreaterThan(3);
+    for (const n of withSaws) {
+      const saws = setup(n).mechanics.find((m) => m instanceof SawbladeMechanic) as SawbladeMechanic;
+      expect(saws.gap, `nivel ${n}`).toBeGreaterThanOrEqual(3);
+    }
+  });
+});
