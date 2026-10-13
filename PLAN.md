@@ -136,7 +136,7 @@ Todas estas tablas se guardan en un `ArcadeTables.ts` y la curva de dificultad (
 | Tipo | Descripción |
 |---|---|
 | `CLEAR` | Comer todos los puntos (clásico) |
-| `RESCUE` | Llegar hasta un personaje encerrado y escoltarlo (te sigue) hasta la salida |
+| `RESCUE` | Llegar hasta un personaje encerrado y escoltarlo (te sigue) hasta la salida; **con el amigo a cuestas Pac-Man va a la mitad de velocidad** |
 | `REACH` | Llegar a un punto del mapa, a veces con límite de tiempo |
 | `COLLECT` | Recoger N objetos (llaves, letras, gemas) |
 | `SURVIVE` | Aguantar X segundos |
@@ -217,7 +217,7 @@ Cada mundo tiene paleta de pared propia, una mecánica estrella que se introduce
 | 35 | Misión `SURVIVE`: 90 s con viento cambiante |
 | 36 | Pingüino aliado que, al tocarlo, congela a un fantasma |
 | 37 | Hielo fino: se rompe tras pasar dos veces y se convierte en pared |
-| 38 | Misión `REACH`: llegar al iglú con ventisca |
+| 38 | Misión `RESCUE`: liberar al pingüino y llevarlo al iglú; con el amigo a cuestas, **Pac-Man va a la mitad de velocidad** |
 | 39 | Energizers congelados (hay que pasar 3 veces para liberarlos) |
 | 40 | **Jefe:** el Yeti-Fantasma, que lanza bolas de nieve en línea recta. Recompensa: recuerdo familiar nº 4 |
 

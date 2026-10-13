@@ -76,7 +76,7 @@ export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
   35: { mission: { type: 'SURVIVE', seconds: 90 }, mechanics: [phenomenon('wobble', 18, 8)] },
   36: { mechanics: [portals(2)] },
   37: { mechanics: [spikes(3, 5)] },
-  38: { mission: { type: 'REACH', timeLimit: 80 }, mechanics: [mud(2)] },
+  38: { mission: { type: 'RESCUE' }, mechanics: [mud(2)] }, // rescate del pingüino hasta el iglú, con Pac-Man a mitad de velocidad
   39: { mechanics: [bombs(2, 3.5), gates(2)] },
   40: { mechanics: [turrets(2, 5), bombs(1), mud(2)] },
 

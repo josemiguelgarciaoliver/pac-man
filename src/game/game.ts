@@ -51,6 +51,8 @@ const HOUSE_SPEED = 0.5;
 /** Velocidad de los ojos que vuelven a casa: algo más rápida que un fantasma normal, no el doble. */
 const EATEN_SPEED = (BASE_SPEED * 0.95) / TICK_RATE;
 const HIGH_KEY = 'pacman.highscore';
+/** Con un amigo rescatado a cuestas, Pac-Man se mueve a la mitad de velocidad. */
+const CARRYING_SPEED = 0.5;
 const DIFFICULTY_KEY = 'pacman.difficulty';
 const FRUIT_TILE = { col: 13, row: 17 };
 const FRUIT_X = 112;
@@ -671,6 +673,7 @@ export class Game {
     const pct = this.frightTicks > 0 ? this.rules.pacFrightSpeed : this.rules.pacSpeed;
     let factor = this.view.speedFactor;
     for (const m of this.mechanics) factor *= m.pacSpeedFactor?.(this.pac) ?? 1;
+    if (this.mission.carrying) factor *= CARRYING_SPEED;
     return (BASE_SPEED * pct * factor) / TICK_RATE;
   }
 
@@ -704,7 +707,10 @@ export class Game {
     }
     const picked = this.mission.update(this.pac);
     if (picked.item) this.audio.sfx('collect');
-    if (picked.freed) this.audio.sfx('rescue');
+    if (picked.freed) {
+      this.audio.sfx('rescue');
+      this.popups.push({ x: this.pac.x, y: this.pac.y - 10, text: 'AMIGO A CUESTAS: MITAD DE VELOCIDAD', ticks: 150 });
+    }
     if (this.mission.consumeEnergizerRespawn()) this.maze.respawnEnergizers();
 
     this.updateModes();

@@ -96,6 +96,11 @@ export class Mission {
     return this.def.type === 'COLLECT' || this.def.type === 'REACH' ? this.def.timeLimit : undefined;
   }
 
+  /** ¿Lleva Pac-Man a un amigo rescatado que aún no ha puesto a salvo? Entonces va más lento. */
+  get carrying(): boolean {
+    return this.def.type === 'RESCUE' && !!this.captive?.freed;
+  }
+
   get collected(): number {
     return this.items.filter((i) => i.taken).length;
   }
@@ -150,7 +155,7 @@ export class Mission {
       case 'REACH':
         return ['LLEGA A LA META', d.timeLimit ? `EN MENOS DE ${d.timeLimit} S` : ''];
       case 'RESCUE':
-        return ['LIBERA AL AMIGO Y', 'LLEVALO A LA SALIDA'];
+        return ['LIBERA AL AMIGO Y LLEVALO', 'A LA SALIDA, VAS MAS LENTO'];
       case 'HUNT':
         return [`COME ${d.ghosts} FANTASMAS`, 'LOS ENERGIZERS VUELVEN'];
       case 'SURVIVE':

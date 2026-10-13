@@ -396,6 +396,18 @@ describe('progresión en el juego (Fase 6)', () => {
     expect(rescue.audio.log).toContain('rescue');
   });
 
+  it('con el amigo rescatado a cuestas Pac-Man va exactamente a la mitad de velocidad', () => {
+    const { game, probe } = newGame(38, memoryStorage());
+    for (let i = 0; i < 1500 && probe.state !== 'play'; i++) game.update();
+    const g = game as unknown as { pacSpeed(): number; mission: { carrying: boolean; target(f: { col: number; row: number }): { col: number; row: number }; update(p: { x: number; y: number; col: number; row: number }): unknown } };
+    const normal = g.pacSpeed(); // en la salida, sin barro ni nada que frene
+    expect(g.mission.carrying).toBe(false);
+    const captive = g.mission.target({ col: 13, row: 23 });
+    g.mission.update({ x: 0, y: 0, col: captive.col, row: captive.row }); // lo libera sin mover a Pac-Man
+    expect(g.mission.carrying).toBe(true);
+    expect(g.pacSpeed()).toBeCloseTo(normal / 2, 6);
+  });
+
   it('perder una vida en el nivel deja solo una estrella', () => {
     const { game } = newGame(3, memoryStorage());
     const g = game as unknown as Run;

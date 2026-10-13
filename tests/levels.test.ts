@@ -210,3 +210,23 @@ describe('niveles raros', () => {
     for (const l of specialLevels) expect(validateLevelMaze(l.level, l.maze), `nivel ${l.level}`).toEqual([]);
   });
 });
+
+describe('rescate con el amigo a cuestas', () => {
+  it('los niveles de rescate son el 28, el 38, el 49 y el 78', () => {
+    const rescues = levels.filter((l) => l.mission.type === 'RESCUE').map((l) => l.level);
+    expect(rescues).toEqual([28, 38, 49, 78]);
+  });
+
+  it('solo se va más lento una vez liberado el amigo, y deja de hacerlo al ponerlo a salvo', () => {
+    const def = buildLevel(38);
+    const m = new Mission(def.mission, def.maze, createRng(38));
+    expect(m.carrying).toBe(false);
+    const captive = m.target({ col: 13, row: 23 })!;
+    m.update({ x: 0, y: 0, col: captive.col, row: captive.row });
+    expect(m.carrying).toBe(true);
+    expect(m.isComplete({ col: 13, row: 23 }, 100)).toBe(true); // llegar a la salida completa el nivel
+    // Las demás misiones nunca van "a cuestas".
+    const clear = new Mission({ type: 'CLEAR' }, def.maze, createRng(1));
+    expect(clear.carrying).toBe(false);
+  });
+});
