@@ -759,7 +759,6 @@ export class Game {
 
   private updateElroy(): void {
     const blinky = this.ghost('blinky');
-    if (!this.elroyEnabled && this.ghost(this.houseOrder[2]).state === 'active') this.elroyEnabled = true;
     const left = this.maze.pelletsLeft;
     blinky.elroy = !this.elroyEnabled ? 0 : left <= this.rules.elroy2Dots ? 2 : left <= this.rules.elroy1Dots ? 1 : 0;
   }
@@ -957,7 +956,7 @@ export class Game {
     this.levelLivesLost++;
     this.globalMode = true;
     this.globalCounter = 0;
-    this.elroyEnabled = false;
+    this.elroyEnabled = false; // tras morir, Blinky no vuelve a acelerar en lo que queda de nivel: se reinicia como al empezar
     if (this.timeUp) this.mission = new Mission(this.levelDef.mission, this.levelDef.maze, createRng(this.levelDef.level * 7919));
     this.beginReady();
   }
