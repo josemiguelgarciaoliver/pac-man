@@ -671,13 +671,13 @@ describe('sonidos al coger los objetos', () => {
 
 describe('envenenamiento (Pac-Man verde)', () => {
   it('los efectos negativos envenenan; los positivos no', () => {
-    for (const bad of ['wobble', 'invert', 'scramble', 'mirror', 'dark'] as const) {
+    for (const bad of ['wobble', 'invert', 'scramble', 'dark'] as const) {
       const v = new ViewEffects();
       expect(v.poisoned).toBe(false);
       v.add(bad, 5);
       expect(v.poisoned, bad).toBe(true);
     }
-    for (const good of ['turbo', 'boost', 'gun', 'rotate'] as const) {
+    for (const good of ['turbo', 'boost', 'gun', 'rotate', 'mirror'] as const) {
       const v = new ViewEffects();
       v.add(good, 5);
       expect(v.poisoned, good).toBe(false);

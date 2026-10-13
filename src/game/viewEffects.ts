@@ -20,7 +20,7 @@ export const EFFECT_INFO: Record<EffectKind, { label: string; color: string }> =
 
 /** Efectos que pueden salir de una seta o de un fenómeno (la supervelocidad es un objeto aparte). */
 /** Efectos que perjudican a Pac-Man: mientras duran, se le tiñe de verde (envenenado). */
-export const NEGATIVE_EFFECTS: readonly EffectKind[] = ['wobble', 'invert', 'scramble', 'mirror', 'dark']; // el giro del laberinto no envenena
+export const NEGATIVE_EFFECTS: readonly EffectKind[] = ['wobble', 'invert', 'scramble', 'dark']; // el giro y el espejo del laberinto no envenenan // el giro del laberinto no envenena
 
 export const ALL_EFFECTS: EffectKind[] = ['wobble', 'invert', 'scramble', 'rotate', 'mirror', 'dark', 'turbo'];
 
