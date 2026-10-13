@@ -5,6 +5,8 @@ export type AmbientKind = 'siren' | 'power' | 'eyes';
 
 const FILES: SoundName[] = ['start', 'waka', 'eat_fruit', 'eat_ghost', 'extra_life', 'intermission', 'death'];
 const MUTE_KEY = 'pacman.muted';
+/** Volumen general: el 40 % del que tenía antes (0,8 → 0,32). */
+export const MASTER_VOLUME = 0.32;
 
 interface Loop {
   kind: AmbientKind;
@@ -36,7 +38,7 @@ export class AudioManager {
       const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.ctx = new AC();
       this.master = this.ctx.createGain();
-      this.master.gain.value = this.muted ? 0 : 0.8;
+      this.master.gain.value = this.muted ? 0 : MASTER_VOLUME;
       this.master.connect(this.ctx.destination);
       void this.loadAll();
     } catch {
@@ -75,7 +77,7 @@ export class AudioManager {
 
   toggleMute(): void {
     this.muted = !this.muted;
-    if (this.master) this.master.gain.value = this.muted ? 0 : 0.8;
+    if (this.master) this.master.gain.value = this.muted ? 0 : MASTER_VOLUME;
     try {
       localStorage.setItem(MUTE_KEY, this.muted ? '1' : '0');
     } catch {
