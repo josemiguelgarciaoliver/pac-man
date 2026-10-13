@@ -18,6 +18,8 @@ export interface MechanicEnv {
   rng: Rng;
   /** Convierte a un fantasma en ojos (y suma puntos). */
   killGhost(ghost: Ghost): void;
+  /** Un ayudante se come el punto de esa casilla (solo puntos normales). Devuelve si había uno. */
+  eatDot(col: number, row: number): boolean;
   sfx(kind: SfxKind): void;
   /** Texto flotante sobre el laberinto (coordenadas del laberinto en px). */
   popup(text: string, x: number, y: number): void;

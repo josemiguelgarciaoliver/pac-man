@@ -505,9 +505,20 @@ export class Game {
       view: this.view,
       rng: this.rng,
       killGhost: (g) => this.killGhostByHazard(g),
+      eatDot: (c, r) => this.helperEatsDot(c, r),
       sfx: (kind) => this.audio.sfx(kind),
       popup: (text, x, y) => this.popups.push({ x, y, text, ticks: 110 }),
     };
+  }
+
+  /** Aina y Aleix se comen los puntos por los que pasan: Pac-Man ya no tiene que recogerlos. */
+  private helperEatsDot(c: number, r: number): boolean {
+    if (this.maze.pelletAt(c, r) !== 'dot') return false;
+    this.maze.eatPellet(c, r);
+    this.addScore(10);
+    const eaten = this.maze.totalPellets - this.maze.pelletsLeft;
+    if (FRUIT_SPAWN_AT.includes(eaten)) this.fruitTicks = FRUIT_TICKS;
+    return true;
   }
 
   /** Un peligro del nivel (bomba…) mata a un fantasma: se convierte en ojos y da puntos. */

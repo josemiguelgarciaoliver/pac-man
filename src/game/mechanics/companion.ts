@@ -43,7 +43,8 @@ interface Helper {
 
 /**
  * Miniaturas con la cara de Aleix y de Aina: al coger su insignia, aparece el hijo en miniatura y
- * persigue a los fantasmas durante unos segundos; cada uno al que alcanza se convierte en ojos.
+ * persigue a los fantasmas durante unos segundos; cada uno al que alcanza se convierte en ojos, y
+ * se come los puntos que va pisando (Pac-Man ya no tiene que recogerlos).
  * Son invulnerables y, si no hay a quién cazar, acompañan a Pac-Man. Las caras se pueden sustituir
  * por fotos (public/assets/faces/aleix.png y aina.png).
  */
@@ -106,6 +107,8 @@ export class CompanionMechanic implements Mechanic {
       this.helper = null;
       return;
     }
+    // Se come los puntos por los que pasa.
+    env.eatDot(Math.floor(h.x / TILE), Math.floor(h.y / TILE));
     // Cacería: toca al fantasma que esté al alcance.
     for (const g of env.ghosts) {
       if (g.state !== 'active') continue;

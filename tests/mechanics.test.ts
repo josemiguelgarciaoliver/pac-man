@@ -47,6 +47,11 @@ function setup(level: number) {
       killed.push(g);
       g.state = 'eaten';
     },
+    eatDot: (c, r) => {
+      if (maze.pelletAt(c, r) !== 'dot') return false;
+      maze.eatPellet(c, r);
+      return true;
+    },
     sfx: (k) => void sounds.push(k),
     popup: (t) => popups.push(t),
   };
@@ -912,5 +917,31 @@ describe('bombas contra fantasmas', () => {
     s.ghosts[2].y = cy;
     s.run(5);
     expect(s.killed).toContain(s.ghosts[2]);
+  });
+});
+
+describe('ayudantes que comen puntos', () => {
+  it('la miniatura se come los puntos por los que pasa', () => {
+    const s = setup(16);
+    const comp = s.mechanics.find((m) => m instanceof CompanionMechanic) as CompanionMechanic;
+    expect(comp).toBeDefined();
+    const before = s.maze.pelletsLeft;
+    const tile = comp.tiles[0];
+    s.place(tile.col, tile.row);
+    s.run(1);
+    s.ghosts[0].state = 'active';
+    s.ghosts[0].x = s.pac.x + 120;
+    s.ghosts[0].y = s.pac.y;
+    s.run(200);
+    expect(comp.active).not.toBeNull();
+    expect(s.maze.pelletsLeft).toBeLessThan(before - 3);
+  });
+
+  it('no se come los energizers', () => {
+    const s = setup(13);
+    const energizers = [...s.maze.pelletTiles()].filter((p) => p.kind === 'energizer').length;
+    s.place(1, 3);
+    s.run(1);
+    expect([...s.maze.pelletTiles()].filter((p) => p.kind === 'energizer').length).toBe(energizers);
   });
 });
