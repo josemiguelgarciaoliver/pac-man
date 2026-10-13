@@ -2,7 +2,7 @@ import type { AudioManager } from '../audio/audio';
 import { ALBUM } from '../data/album';
 import { FAMILY, levelPhrase } from '../data/family';
 import { ORIGINAL_PAC_SPAWN } from '../data/mazes/original';
-import { LEVELS_PER_WORLD, TOTAL_LEVELS } from '../data/worlds';
+import { LEVELS_PER_WORLD, TOTAL_LEVELS, worldLabel } from '../data/worlds';
 import { CHAR_W, drawText, drawTextCentered, drawTextRight } from '../engine/font';
 import type { Input } from '../input/input';
 import { HOUSE_DOOR_TILE, SCATTER_TARGETS, chaseTarget, type GhostName, type Tile } from './actors/ai';
@@ -1150,7 +1150,7 @@ export class Game {
     drawTextRight(ctx, String(this.high).padStart(2, '0'), 17 * TILE, TILE, COLORS.text);
 
     if (this.state === 'title' || this.state === 'victory') return;
-    drawTextRight(ctx, `MUNDO ${this.levelDef.world}`, SCREEN_W - 4, 0, this.levelDef.wallColor);
+    drawTextRight(ctx, `MUNDO ${worldLabel(this.levelDef.world)}`, SCREEN_W - 4, 0, this.levelDef.wallColor);
     drawTextRight(ctx, `NIVEL ${this.levelDef.stage}`, SCREEN_W - 4, TILE, COLORS.text);
     // Si hay varios efectos a la vez, el aviso muestra primero el que perjudica (el veneno).
     const active = this.view.active();
@@ -1208,7 +1208,7 @@ export class Game {
     const cx = SCREEN_W / 2;
     drawEmblem(ctx, this.theme.emblem, x + 22, y + 22, 9, this.theme.wall);
     drawEmblem(ctx, this.theme.emblem, x + w - 22, y + 22, 9, this.theme.wall);
-    drawTextCentered(ctx, `MUNDO ${def.world}`, cx, y + 9, def.wallColor);
+    drawTextCentered(ctx, `MUNDO ${worldLabel(def.world)}`, cx, y + 9, def.wallColor);
     drawTextCentered(ctx, def.name.toUpperCase(), cx, y + 21, COLORS.text);
     drawTextCentered(ctx, `NIVEL ${def.stage}`, cx, y + 34, COLORS.ready);
     if (def.subtitle) drawTextCentered(ctx, def.subtitle, cx, y + 46, '#ff9ae8');

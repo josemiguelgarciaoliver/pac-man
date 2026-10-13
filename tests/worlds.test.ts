@@ -14,3 +14,11 @@ describe('levelPosition', () => {
     expect(levelPosition(250).level).toBe(100);
   });
 });
+
+describe('numeración de mundos para el jugador', () => {
+  it('se muestran del 0 al 9', async () => {
+    const { worldLabel } = await import('../src/data/worlds');
+    expect(worldLabel(1)).toBe(0);
+    expect(worldLabel(10)).toBe(9);
+  });
+});

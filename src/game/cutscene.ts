@@ -1,5 +1,5 @@
 import { FAMILY, type FamilyMember } from '../data/family';
-import { WORLD_NAMES } from '../data/worlds';
+import { WORLD_NAMES, worldLabel } from '../data/worlds';
 import { drawTextCentered } from '../engine/font';
 import { COLORS, Dir, SCREEN_H, SCREEN_W } from './constants';
 import { drawFace } from './faces';
@@ -54,7 +54,7 @@ export function drawCutscene(ctx: CanvasRenderingContext2D, world: number, tick:
   ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
 
   drawEmblem(ctx, theme.emblem, cx, 40, 14, theme.wall);
-  drawTextCentered(ctx, `MUNDO ${world} COMPLETADO`, cx, 66, COLORS.ready);
+  drawTextCentered(ctx, `MUNDO ${worldLabel(world)} COMPLETADO`, cx, 66, COLORS.ready);
   drawTextCentered(ctx, WORLD_NAMES[world - 1].toUpperCase(), cx, 79, theme.wall);
 
   // Suelo.

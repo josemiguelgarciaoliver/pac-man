@@ -24,6 +24,9 @@ export interface LevelPosition {
   name: string;
 }
 
+/** Número de mundo que ve el jugador: del 0 al 9 (internamente siguen siendo 1–10). */
+export const worldLabel = (world: number): number => world - 1;
+
 /** Traduce el nivel global (1–100) a mundo y nivel dentro del mundo. */
 export function levelPosition(level: number): LevelPosition {
   const n = Math.min(Math.max(Math.floor(level), 1), TOTAL_LEVELS);

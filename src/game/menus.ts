@@ -1,6 +1,6 @@
 import { ALBUM } from '../data/album';
 import { FAMILY } from '../data/family';
-import { LEVELS_PER_WORLD, TOTAL_LEVELS, WORLD_NAMES } from '../data/worlds';
+import { LEVELS_PER_WORLD, TOTAL_LEVELS, WORLD_NAMES, worldLabel } from '../data/worlds';
 import { drawText, drawTextCentered, drawTextRight } from '../engine/font';
 import { COLORS, Dir, SCREEN_H, SCREEN_W } from './constants';
 import { buildLevel } from './level/levels';
@@ -285,7 +285,7 @@ export class Menus {
       ctx.globalAlpha = open ? 1 : 0.35;
       drawEmblem(ctx, theme.emblem, x + 14, y + 19, 8, theme.wall);
       ctx.restore();
-      drawText(ctx, `MUNDO ${w}`, x + 28, y + 4, open ? theme.wall : DIM);
+      drawText(ctx, `MUNDO ${worldLabel(w)}`, x + 28, y + 4, open ? theme.wall : DIM);
       drawText(ctx, SHORT_NAMES[w - 1], x + 28, y + 15, open ? COLORS.text : DIM);
       if (open) drawStars(ctx, x + 29, y + 30, worldStars(this.host.progress, w), 30, '#ffd24a', 3.2, `${worldStars(this.host.progress, w)}/30`);
       else drawText(ctx, 'BLOQUEADO', x + 28, y + 26, DIM);
@@ -296,7 +296,7 @@ export class Menus {
   private drawLevels(ctx: CanvasRenderingContext2D): void {
     const w = this.world;
     const theme = themeOfWorld(w);
-    this.drawHeader(ctx, `MUNDO ${w}`, WORLD_NAMES[w - 1].toUpperCase());
+    this.drawHeader(ctx, `MUNDO ${worldLabel(w)}`, WORLD_NAMES[w - 1].toUpperCase());
     drawEmblem(ctx, theme.emblem, 20, 20, 8, theme.wall);
     drawEmblem(ctx, theme.emblem, SCREEN_W - 20, 20, 8, theme.wall);
 
@@ -372,7 +372,7 @@ export class Menus {
       entry.lines.forEach((l, i) => drawText(ctx, l, 16, 170 + i * 13, COLORS.text));
     } else {
       drawTextCentered(ctx, `SE DESBLOQUEA AL COMPLETAR`, SCREEN_W / 2, 178, DIM);
-      drawTextCentered(ctx, `EL MUNDO ${entry.world} (NIVEL ${entry.world * LEVELS_PER_WORLD})`, SCREEN_W / 2, 192, DIM);
+      drawTextCentered(ctx, `EL MUNDO ${worldLabel(entry.world)} (NIVEL ${entry.world * LEVELS_PER_WORLD})`, SCREEN_W / 2, 192, DIM);
     }
     this.drawBackHint(ctx);
   }
