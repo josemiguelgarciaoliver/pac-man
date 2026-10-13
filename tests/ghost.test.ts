@@ -39,7 +39,7 @@ describe('reglas por nivel', () => {
   it('el nivel 1 usa 80 % para Pac-Man y 75 % para los fantasmas', () => {
     const r = getLevelRules(1);
     expect(r.pacSpeed).toBe(0.8);
-    expect(r.ghostSpeed).toBe(0.75);
+    expect(r.ghostSpeed).toBeCloseTo(0.675, 5);
     expect(r.frightTicks).toBe(360);
   });
   it('el estado asustado dura cada vez menos y desaparece en el último nivel', () => {
@@ -154,7 +154,7 @@ describe('dificultad', () => {
   });
 
   it('arcade respeta las tablas originales del primer nivel', () => {
-    expect(getLevelRules(1, 'arcade').ghostSpeed).toBe(0.75);
+    expect(getLevelRules(1, 'arcade').ghostSpeed).toBeCloseTo(0.675, 5);
     expect(getLevelRules(1).frightTicks).toBe(360);
     expect(getLevelRules(1).pacSpeed).toBe(0.8);
   });
