@@ -222,6 +222,49 @@ describe('checkpoints en el juego', () => {
   });
 });
 
+describe('arranque aleatorio de los fantasmas', () => {
+  type G = { rng: unknown; beginReady(): void; houseOrder: string[]; corners: Record<string, unknown>; ghost(n: string): { dir: number }; updateHouse(): void; ghosts: { name: string; state: string }[]; personal: Record<string, number> };
+
+  it('cada vida cambia el orden de salida, las esquinas y la dirección de salida', () => {
+    const orders = new Set<string>();
+    const corners = new Set<string>();
+    const dirs = new Set<number>();
+    for (let seed = 1; seed <= 60; seed++) {
+      const { game } = newGame(3);
+      const g = game as unknown as G;
+      g.rng = createRng(seed);
+      g.beginReady();
+      orders.add(g.houseOrder.join());
+      corners.add(JSON.stringify(g.corners));
+      dirs.add(g.ghost('blinky').dir);
+    }
+    expect(orders.size).toBeGreaterThanOrEqual(4);
+    expect(corners.size).toBeGreaterThanOrEqual(8);
+    expect(dirs.size).toBe(2); // sale por la izquierda o por la derecha
+  });
+
+  it('con la misma semilla el arranque se repite (los replays siguen siendo posibles)', () => {
+    const start = (seed: number) => {
+      const { game } = newGame(3);
+      const g = game as unknown as G;
+      g.rng = createRng(seed);
+      g.beginReady();
+      return [g.houseOrder.join(), JSON.stringify(g.corners), g.ghost('blinky').dir];
+    };
+    expect(start(7)).toEqual(start(7));
+  });
+
+  it('quien va primero en la cola sale primero, sea cual sea el fantasma', () => {
+    const { game } = newGame(3); // nivel 3: todos los límites son 0
+    const g = game as unknown as G;
+    g.houseOrder = ['clyde', 'inky', 'pinky'];
+    for (const gh of g.ghosts) if (gh.name !== 'blinky') gh.state = 'house';
+    g.updateHouse();
+    expect(g.ghosts.find((x) => x.name === 'clyde')!.state).toBe('leaving');
+    expect(g.ghosts.find((x) => x.name === 'pinky')!.state).toBe('house');
+  });
+});
+
 describe('progresión en el juego (Fase 6)', () => {
   type Run = Probe & {
     completeLevel(): void;

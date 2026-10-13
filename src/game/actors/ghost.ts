@@ -44,6 +44,8 @@ export interface MoveEnv {
   rng: Rng;
   /** Velocidad de salida/entrada de la casa y rebote, px por tick. */
   houseSpeed: number;
+  /** Probabilidad (0–1) de que un fantasma activo elija una salida al azar en un cruce en lugar de la óptima. */
+  chaos?: number;
 }
 
 export class Ghost {
@@ -99,8 +101,14 @@ export class Ghost {
 
   /** Primer rumbo tras salir de la casa, calculado como lo haría el arcade. */
   initNav(env: MoveEnv): void {
-    this.dir = Dir.Left;
-    this.nextDir = this.chooseNext(env, 13, 11, Dir.Left);
+    // Al salir de la casa cada fantasma tira por la izquierda o por la derecha, al azar.
+    if (env.rng.chance(0.5)) {
+      this.dir = Dir.Left;
+      this.nextDir = this.chooseNext(env, 13, 11, Dir.Left);
+    } else {
+      this.dir = Dir.Right;
+      this.nextDir = this.chooseNext(env, 14, 11, Dir.Right);
+    }
   }
 
   move(env: MoveEnv, speed: number): void {
@@ -255,6 +263,8 @@ export class Ghost {
     }
     if (options.length === 0) return opposite(arrivalDir);
     if (this.frightened && this.state === 'active') return options[env.rng.int(options.length)];
+    // "Caos": a veces un fantasma activo se desvía de la ruta óptima, así cada partida arranca distinta.
+    if (this.state === 'active' && options.length > 1 && env.chaos && env.rng.chance(env.chaos)) return options[env.rng.int(options.length)];
     if (this.state === 'eaten') return this.chooseHome(env, col, row, options);
 
     let best = options[0];

@@ -21,7 +21,7 @@ export const HOUSE_DOOR_TILE: Tile = { col: 13, row: 11 };
  * Casilla objetivo en modo persecución. Replica los *bugs* del arcade:
  * con Pac-Man mirando arriba, el objetivo de Pinky e Inky también se desplaza a la izquierda.
  */
-export function chaseTarget(name: GhostName, ghost: Tile, pac: Tile & { dir: Dir }, blinky: Tile): Tile {
+export function chaseTarget(name: GhostName, ghost: Tile, pac: Tile & { dir: Dir }, blinky: Tile, clydeCorner: Tile = SCATTER_TARGETS.clyde): Tile {
   const d = DIRS[pac.dir];
   const ahead = (n: number): Tile => ({
     col: pac.col + d.x * n - (pac.dir === Dir.Up ? n : 0),
@@ -39,7 +39,7 @@ export function chaseTarget(name: GhostName, ghost: Tile, pac: Tile & { dir: Dir
     case 'clyde': {
       const dx = ghost.col - pac.col;
       const dy = ghost.row - pac.row;
-      return dx * dx + dy * dy > 64 ? { col: pac.col, row: pac.row } : SCATTER_TARGETS.clyde;
+      return dx * dx + dy * dy > 64 ? { col: pac.col, row: pac.row } : clydeCorner;
     }
   }
 }

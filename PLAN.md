@@ -94,6 +94,7 @@ Esta es la "física" del juego. Se implementa en `game/rules` con tests que la v
   - **Pinky** (rosa): 4 tiles por delante de Pac-Man (incluido el *bug* de desbordamiento hacia arriba-izquierda).
   - **Inky** (cian): vector desde Blinky, duplicado, a 2 tiles por delante de Pac-Man.
   - **Clyde** (naranja): persigue si está a más de 8 tiles y, si no, vuelve a su esquina.
+- **Arranque aleatorio:** cada vida baraja el orden de salida de la casa (los umbrales de puntos se asignan por posición en la cola), las esquinas de dispersión y la dirección de salida; las fases varían un ±15 % y los fantasmas se desvían a veces de la ruta óptima, sobre todo en los primeros 15 s (algo que se desvanece hacia el nivel 100, donde son cazadores perfectos).
 - **Modos:** alternancia *Scatter/Chase* con la tabla por nivel (7/20/7/20/5/20/5/∞ s en el nivel 1, etc.). Al cambiar de modo, los fantasmas invierten la dirección.
 - **Asustados (*frightened*):** movimiento pseudoaleatorio con el PRNG original, duración por nivel (6 s → 0 s) y parpadeo de aviso. Puntos encadenados: 200/400/800/1600.
 - **Casa de fantasmas:** contadores de puntos por fantasma, contador global tras una muerte y temporizador de salida si Pac-Man deja de comer.
@@ -352,7 +353,9 @@ Cada mecánica es un *plugin* (`src/game/mechanics/`) descrito por datos en el n
 | **Setas tóxicas** | Al comerlas dan un efecto al azar de la lista del nivel (ver abajo) y vuelven a crecer a los 25 s | M2, M8, M9, M10 |
 | **Fenómenos** | El propio nivel provoca cada cierto tiempo un efecto: niebla, ventisca, laberinto que gira, mundo en espejo… | M2, M4, M5, M6, M8, M9, M10 |
 
-**Efectos de estado** (setas y fenómenos), todos temporales y con el aviso del nombre y los segundos que quedan:
+**Sonidos:** cada objeto tiene el suyo al cogerlo (zapatillas, pistola, Aleix, Aina, trampa de furia, seta, portal), igual que los objetos de las misiones, el rescate del amigo, la Pista de Aina y el Señuelo de Aleix.
+
+**Efectos de estado** (setas y fenómenos), todos temporales y con el aviso del nombre y los segundos que quedan. Los **negativos tiñen a Pac-Man de verde** (envenenado, con vapores) mientras duran:
 
 | Efecto | Qué ocurre |
 |---|---|
@@ -371,7 +374,7 @@ Cada mecánica es un *plugin* (`src/game/mechanics/`) descrito por datos en el n
 | Objeto | Efecto |
 |---|---|
 | **Zapatillas rojas** | Supervelocidad (×2,1) durante **1 minuto**, con estela. Un nivel de cada cinco (4, 9, 14…) y el 100 |
-| **Blaster** | Pac-Man puede **disparar** durante 1 minuto (Espacio / botón FUEGO / botón B del mando); cada disparo convierte en ojos al primer fantasma que alcanza. Niveles 7, 12, 17… y el 100 |
+| **Pistola** | Pac-Man **lleva la pistola en la mano** (apunta hacia donde mira, con retroceso al disparar) y puede **disparar** durante 1 minuto (Espacio / botón FUEGO / botón B del mando); cada disparo convierte en ojos al primer fantasma que alcanza. Niveles 7, 12, 17… y el 100 |
 | **Miniaturas de Aleix y Aina** | Su insignia invoca al hijo en miniatura, que **caza fantasmas** unos segundos (Aleix: rápido y va a por el más cercano a él, 10 s; Aina: más lenta, protege a Pac-Man, 14 s). La cara se puede sustituir por una foto: `public/assets/faces/aleix.png` y `aina.png` |
 | **Trampa de furia** | Una placa roja que, al pisarla, enfurece a **un** fantasma al azar con supervelocidad unos segundos (aura roja y aviso con su nombre) |
 

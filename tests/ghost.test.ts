@@ -271,3 +271,39 @@ describe('regeneración de los fantasmas comidos', () => {
     expect(g.frightened).toBe(false);
   });
 });
+
+describe('decisiones con "caos"', () => {
+  const route = (seed: number, chaos: number) => {
+    const maze = new Maze(ORIGINAL_MAZE, ORIGINAL_PAC_SPAWN);
+    const env: MoveEnv = { maze, target: { col: 26, row: 29 }, rng: createRng(seed), houseSpeed: 0.5, chaos };
+    const g = new Ghost('blinky');
+    g.spawnAt(env, 6, 5, Dir.Right);
+    const seq: string[] = [];
+    for (let i = 0; i < 400; i++) {
+      g.move(env, 1);
+      const k = `${g.col},${g.row}`;
+      if (seq[seq.length - 1] !== k) seq.push(k);
+    }
+    return seq.join('>');
+  };
+
+  it('sin caos la ruta es siempre la misma; con caos varía de una vez a otra', () => {
+    const calm = new Set(Array.from({ length: 12 }, (_, s) => route(s + 1, 0)));
+    const wild = new Set(Array.from({ length: 12 }, (_, s) => route(s + 1, 0.5)));
+    expect(calm.size).toBe(1);
+    expect(wild.size).toBeGreaterThan(3);
+  });
+
+  it('con caos sigue sin atravesar paredes', () => {
+    const maze = new Maze(ORIGINAL_MAZE, ORIGINAL_PAC_SPAWN);
+    for (let seed = 1; seed <= 10; seed++) {
+      const env: MoveEnv = { maze, target: { col: 1, row: 1 }, rng: createRng(seed), houseSpeed: 0.5, chaos: 0.6 };
+      const g = new Ghost('inky');
+      g.spawnAt(env, 6, 5, Dir.Right);
+      for (let i = 0; i < 1500; i++) {
+        g.move(env, 1.1);
+        expect(maze.charAt(g.col, g.row)).not.toBe('#');
+      }
+    }
+  });
+});

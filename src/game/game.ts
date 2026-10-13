@@ -30,7 +30,7 @@ import { Projectiles } from './projectiles';
 import { createRng, type Rng } from './random';
 import { DIFFICULTY_PRESETS, FRUIT_POINTS, GHOST_POINTS, GLOBAL_RELEASE, fruitForLevel, getLevelRules, type Difficulty, type LevelRules } from './rules';
 import { drawFruit, drawGhost, drawPac, drawPacDeath, drawPistol, type GhostLook } from './sprites';
-import { EFFECT_INFO, ViewEffects } from './viewEffects';
+import { EFFECT_INFO, NEGATIVE_EFFECTS, ViewEffects } from './viewEffects';
 
 type State = 'title' | 'cutscene' | 'ready' | 'play' | 'ghostEaten' | 'dying' | 'clear' | 'gameover' | 'victory' | 'paused';
 
@@ -67,6 +67,8 @@ const MAZE_CENTER = { x: SCREEN_W / 2, y: MAZE_TOP + (31 * TILE) / 2 };
 
 const GHOST_NAMES: GhostName[] = ['blinky', 'pinky', 'inky', 'clyde'];
 const HOUSE_ORDER: Exclude<GhostName, 'blinky'>[] = ['pinky', 'inky', 'clyde'];
+/** Al empezar cada vida, los fantasmas hacen más "locuras" durante este tiempo (ticks). */
+const EARLY_CHAOS_TICKS = 15 * TICK_RATE;
 
 interface Popup {
   x: number;
@@ -161,6 +163,11 @@ export class Game {
   // Modos de los fantasmas
   private modeIndex = 0;
   private modeTimer = 0;
+  /** Orden en que salen de la casa (se baraja en cada vida) y esquina de dispersión de cada uno. */
+  private houseOrder: Exclude<GhostName, 'blinky'>[] = [...HOUSE_ORDER];
+  private corners: Record<GhostName, Tile> = { ...SCATTER_TARGETS };
+  /** Ticks que quedan de "arranque caótico" en la vida actual. */
+  private earlyTicks = 0;
   private frightTicks = 0;
   private frightCombo = 0;
   private elroyEnabled = true;
@@ -196,6 +203,8 @@ export class Game {
     }
     // ?autostart salta la pantalla de título; ?level=N empieza en ese nivel (pruebas y capturas).
     if (params.has('autostart')) this.startGame(Number(params.get('level')) || 1);
+    // Depuración: ?fx=gun,invert,boost… activa efectos durante 60 s (solo con ?autostart).
+    for (const name of (params.get('fx') ?? '').split(',').filter(Boolean)) if (name in EFFECT_INFO) this.view.add(name as keyof typeof EFFECT_INFO, 60);
   }
 
   // ───────────────────────── Ciclo de vida ─────────────────────────
@@ -517,7 +526,11 @@ export class Game {
     this.input.direction = null;
     this.eatPause = 0;
     this.modeIndex = 0;
-    this.modeTimer = this.rules.schedule[0];
+    // Cada vida arranca distinta: orden de salida, esquinas y duración de las fases al azar.
+    this.houseOrder = this.rng.shuffle(HOUSE_ORDER);
+    this.corners = this.shuffledCorners();
+    this.earlyTicks = EARLY_CHAOS_TICKS;
+    this.modeTimer = this.jitter(this.rules.schedule[0]);
     this.frightTicks = 0;
     this.idleTicks = 0;
     this.fruitTicks = 0;
@@ -571,7 +584,27 @@ export class Game {
   }
 
   private envFor(g: Ghost): MoveEnv {
-    return { maze: this.maze, target: this.targetFor(g), rng: this.rng, houseSpeed: HOUSE_SPEED };
+    return { maze: this.maze, target: this.targetFor(g), rng: this.rng, houseSpeed: HOUSE_SPEED, chaos: this.chaosLevel() };
+  }
+
+  /** Reparte al azar las cuatro esquinas de dispersión entre los cuatro fantasmas. */
+  private shuffledCorners(): Record<GhostName, Tile> {
+    const shuffled = this.rng.shuffle(Object.values(SCATTER_TARGETS));
+    return { blinky: shuffled[0], pinky: shuffled[1], inky: shuffled[2], clyde: shuffled[3] };
+  }
+
+  /** Varía hasta un ±15 % la duración de una fase (las infinitas o muy cortas se dejan como están). */
+  private jitter(ticks: number): number {
+    return Number.isFinite(ticks) && ticks > 90 ? Math.round(ticks * (0.85 + this.rng.float() * 0.3)) : ticks;
+  }
+
+  /**
+   * Probabilidad de que un fantasma se desvíe en un cruce: algo siempre y bastante más en los primeros
+   * segundos de cada vida. Se desvanece con el avance del juego: en el último nivel son cazadores perfectos.
+   */
+  private chaosLevel(): number {
+    const progress = Math.min(1, (this.levelDef.level - 1) / 99);
+    return (0.08 + (this.earlyTicks > 0 ? 0.3 : 0)) * (1 - progress);
   }
 
   private initBlinky(): void {
@@ -587,10 +620,10 @@ export class Game {
     if (g.state === 'eaten') return HOUSE_DOOR_TILE;
     const decoy = this.helpers.decoy;
     // El señuelo de Aleix obliga a los fantasmas a perseguirlo, también en dispersión.
-    if (!decoy && this.isScatter() && !(g.name === 'blinky' && g.elroy > 0)) return SCATTER_TARGETS[g.name];
+    if (!decoy && this.isScatter() && !(g.name === 'blinky' && g.elroy > 0)) return this.corners[g.name];
     const blinky = this.ghost('blinky');
     const quarry = decoy ? { col: decoy.col, row: decoy.row, dir: Dir.Left } : { col: this.pac.col, row: this.pac.row, dir: this.pac.dir };
-    return chaseTarget(g.name, { col: g.col, row: g.row }, quarry, { col: blinky.col, row: blinky.row });
+    return chaseTarget(g.name, { col: g.col, row: g.row }, quarry, { col: blinky.col, row: blinky.row }, this.corners.clyde);
   }
 
   private ghostSpeed(g: Ghost): number {
@@ -621,6 +654,7 @@ export class Game {
 
   private updatePlay(): void {
     this.levelPlayTicks++;
+    if (this.earlyTicks > 0) this.earlyTicks--;
     // Solo las pulsaciones nuevas se traducen: así un efecto de mando no reinterpreta lo ya pulsado.
     if (this.input.directionSeq !== this.seenDirectionSeq) {
       this.seenDirectionSeq = this.input.directionSeq;
@@ -691,13 +725,13 @@ export class Game {
     }
     if (--this.modeTimer > 0) return;
     this.modeIndex = Math.min(this.modeIndex + 1, this.rules.schedule.length - 1);
-    this.modeTimer = this.rules.schedule[this.modeIndex];
+    this.modeTimer = this.jitter(this.rules.schedule[this.modeIndex]);
     for (const g of this.ghosts) g.requestReverse();
   }
 
   private updateElroy(): void {
     const blinky = this.ghost('blinky');
-    if (!this.elroyEnabled && this.ghost('clyde').state === 'active') this.elroyEnabled = true;
+    if (!this.elroyEnabled && this.ghost(this.houseOrder[2]).state === 'active') this.elroyEnabled = true;
     const left = this.maze.pelletsLeft;
     blinky.elroy = !this.elroyEnabled ? 0 : left <= this.rules.elroy2Dots ? 2 : left <= this.rules.elroy1Dots ? 1 : 0;
   }
@@ -795,7 +829,7 @@ export class Game {
   }
 
   private nextInHouse(): Ghost | undefined {
-    for (const name of HOUSE_ORDER) {
+    for (const name of this.houseOrder) {
       const g = this.ghost(name);
       // Los fantasmas que se están regenerando salen por su cuenta, no por los contadores de puntos.
       if (g.state === 'house' && g.reviveTicks === 0) return g;
@@ -808,12 +842,14 @@ export class Game {
     if (!g) return;
     if (this.globalMode) {
       this.globalCounter++;
-      for (const name of HOUSE_ORDER) {
+      // Los umbrales (7, 17, 32) se asignan por posición en la cola de salida, sea cual sea el fantasma.
+      const thresholds = [GLOBAL_RELEASE.pinky, GLOBAL_RELEASE.inky, GLOBAL_RELEASE.clyde];
+      for (const [pos, name] of this.houseOrder.entries()) {
         const gh = this.ghost(name);
-        if (gh.state === 'house' && this.globalCounter === GLOBAL_RELEASE[name]) {
+        if (gh.state === 'house' && this.globalCounter === thresholds[pos]) {
           this.releaseGhost(gh);
-          // Clyde sale: se vuelve a los contadores personales.
-          if (name === 'clyde') this.globalMode = false;
+          // Sale el último de la cola: se vuelve a los contadores personales.
+          if (pos === this.houseOrder.length - 1) this.globalMode = false;
           break;
         }
       }
@@ -826,7 +862,9 @@ export class Game {
     const g = this.nextInHouse();
     if (!g) return;
     this.idleTicks++;
-    if (!this.globalMode && this.personal[g.name] >= this.rules.houseLimits[g.name as 'pinky' | 'inky' | 'clyde']) {
+    // Los límites de puntos (0, 30, 60…) se asignan por posición en la cola de salida.
+    const limits = [this.rules.houseLimits.pinky, this.rules.houseLimits.inky, this.rules.houseLimits.clyde];
+    if (!this.globalMode && this.personal[g.name] >= limits[this.houseOrder.indexOf(g.name as 'pinky' | 'inky' | 'clyde')]) {
       this.releaseGhost(g);
       return;
     }
@@ -1063,7 +1101,9 @@ export class Game {
     if (this.state === 'title' || this.state === 'victory') return;
     drawTextRight(ctx, `MUNDO ${this.levelDef.world}`, SCREEN_W - 4, 0, this.levelDef.wallColor);
     drawTextRight(ctx, `NIVEL ${this.levelDef.stage}`, SCREEN_W - 4, TILE, COLORS.text);
-    const effect = this.view.active()[0];
+    // Si hay varios efectos a la vez, el aviso muestra primero el que perjudica (el veneno).
+    const active = this.view.active();
+    const effect = active.find((e) => NEGATIVE_EFFECTS.includes(e.kind)) ?? active[0];
     if (effect) {
       const info = EFFECT_INFO[effect.kind];
       const blink = effect.seconds > 2 || Math.floor(this.frame / 8) % 2 === 0;
