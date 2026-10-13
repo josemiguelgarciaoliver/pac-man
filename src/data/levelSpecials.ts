@@ -28,6 +28,9 @@ const shrooms = (count: number, effects: EffectKind[] = ['wobble', 'invert', 'sc
   effectSeconds,
 });
 const phenomenon = (effect: EffectKind, everySeconds: number, durationSeconds: number): MechanicDef => ({ type: 'phenomenon', effect, everySeconds, durationSeconds });
+const cloak = (count = 1, seconds = 8): MechanicDef => ({ type: 'cloak', count, seconds });
+const hole = (count = 1): MechanicDef => ({ type: 'hole', count });
+const corrupt = (count = 2): MechanicDef => ({ type: 'corrupt', count });
 const boo = (everySeconds = 20, staySeconds = 12): MechanicDef => ({ type: 'boo', everySeconds, staySeconds });
 const ufo = (everySeconds = 18, staySeconds = 9, fireSeconds = 2.4): MechanicDef => ({ type: 'ufo', everySeconds, staySeconds, fireSeconds });
 const lava = (everySeconds: number, count = 1, splash = 1): MechanicDef => ({ type: 'lava', count, everySeconds, splash });
@@ -146,16 +149,16 @@ export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
   90: { mechanics: [turrets(3, 4), gates(3, 5, 3), bombs(2, 3), boo(15, 14)] },
 
   // ── Mundo 10 — El Núcleo Glitch: todo mezclado y corrompido ──
-  91: { mechanics: [shrooms(4, undefined, 9), portals(2)] },
-  92: { mechanics: [belts(5, { speed: 0.75, ghosts: true, reverseEvery: 6 }), spikes(3, 4)] },
-  93: { mechanics: [turrets(3, 4), portals(1), phenomenon('dark', 18, 9)] },
-  94: { mechanics: [phenomenon('mirror', 10, 8), shrooms(3, ['invert', 'scramble'], 9)] },
+  91: { mission: { type: 'COLLECT', count: 5, icon: 'chip', timeLimit: 80 }, mechanics: [shrooms(4, undefined, 9), portals(2), hole(1)] },
+  92: { mechanics: [belts(5, { speed: 0.75, ghosts: true, reverseEvery: 6 }), spikes(3, 4), corrupt(2)] },
+  93: { mechanics: [turrets(3, 4), portals(1), phenomenon('dark', 18, 9), cloak(1)] },
+  94: { mechanics: [phenomenon('mirror', 10, 8), shrooms(3, ['invert', 'scramble'], 9), hole(1)] },
   95: { mission: { type: 'REACH', timeLimit: 10 }, mechanics: [phenomenon('rotate', 14, 8), gates(3)] },
-  96: { mechanics: [bombs(3, 2.5), turrets(3, 3.5), spikes(4, 3.5)] },
-  97: { mechanics: [mud(3), portals(2), saws(4, 0.9), shrooms(3)] },
-  98: { mission: { type: 'SURVIVE', seconds: 75 }, mechanics: [turrets(3, 3.5), saws(3, 0.9), spikes(3, 4)] },
-  99: { mechanics: [phenomenon('rotate', 12, 8), turrets(3, 3.5), shrooms(3)] },
-  100: { mechanics: [turrets(4, 3.5), saws(4, 0.9), bombs(3, 2.5), shrooms(4, undefined, 9), phenomenon('rotate', 16, 7)] },
+  96: { mechanics: [bombs(3, 2.5), turrets(3, 3.5), spikes(4, 3.5), corrupt(2)] },
+  97: { mission: { type: 'COLLECT', count: 6, icon: 'chip', timeLimit: 85 }, mechanics: [mud(3), portals(2), saws(4, 0.9), shrooms(3), hole(1)] },
+  98: { mission: { type: 'SURVIVE', seconds: 75 }, mechanics: [turrets(3, 3.5), saws(3, 0.9), spikes(3, 4), cloak(1, 7)] },
+  99: { mechanics: [phenomenon('rotate', 12, 8), turrets(3, 3.5), shrooms(3), hole(1)] },
+  100: { mechanics: [turrets(4, 3.5), saws(4, 0.9), bombs(3, 2.5), shrooms(4, undefined, 9), phenomenon('rotate', 16, 7), cloak(1, 6), corrupt(2)] },
 };
 
 /**

@@ -7,7 +7,10 @@ import { BooMechanic } from './boo';
 import { BombMechanic } from './bomb';
 import { BoostMechanic } from './boost';
 import { CompanionMechanic } from './companion';
+import { CloakMechanic } from './cloak';
 import { ConveyorMechanic } from './conveyor';
+import { CorruptMechanic } from './corrupt';
+import { DataHoleMechanic } from './datahole';
 import { GateMechanic } from './gate';
 import { JellyfishMechanic } from './jellyfish';
 import { LavaMechanic } from './lava';
@@ -25,7 +28,7 @@ import { UfoMechanic } from './ufo';
 export type { Mechanic, MechanicEnv, SfxKind } from './mechanic';
 
 /** Mecánicas que reparten objetos por el laberinto: no pueden solaparse entre sí ni con la misión. */
-const PICKUPS = new Set(['ankh', 'blaster', 'bomb', 'boost', 'companion', 'mushroom', 'rage', 'teleport']);
+const PICKUPS = new Set(['ankh', 'blaster', 'bomb', 'boost', 'cloak', 'companion', 'hole', 'mushroom', 'rage', 'teleport']);
 
 /** Crea las mecánicas de un nivel a partir de sus datos. Para añadir una nueva: un caso aquí. */
 export function createMechanics(defs: readonly MechanicDef[], lines: readonly string[], rng: Rng, occupied: readonly TileXY[] = []): Mechanic[] {
@@ -58,6 +61,12 @@ export function createMechanics(defs: readonly MechanicDef[], lines: readonly st
         return new SpikesMechanic(def, lines, rng);
       case 'mushroom':
         return new MushroomMechanic(def, lines, rng, avoid);
+      case 'cloak':
+        return new CloakMechanic(def, lines, rng, avoid);
+      case 'hole':
+        return new DataHoleMechanic(def, lines, rng, avoid);
+      case 'corrupt':
+        return new CorruptMechanic(def, lines, rng);
       case 'boo':
         return new BooMechanic(def, lines, rng);
       case 'ufo':

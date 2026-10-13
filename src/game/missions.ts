@@ -18,6 +18,8 @@ const TAU = Math.PI * 2;
 
 /** Las células de energía se desvanecen cada cierto tiempo y reaparecen en otro sitio. */
 const CELL_MOVE_SECONDS = 8;
+/** Objetos que se desvanecen y cambian de sitio: células de energía y archivos corruptos. */
+const MOVING_ICONS: readonly CollectIcon[] = ['cell', 'chip'];
 const FADE_OUT_TICKS = 28;
 const FADE_IN_TICKS = 24;
 /** Las células nunca reaparecen a menos de estas casillas de Pac-Man (Manhattan). */
@@ -53,7 +55,7 @@ export class Mission {
     lines: readonly string[],
     private readonly rng: Rng,
   ) {
-    this.spots = def.type === 'COLLECT' && def.icon === 'cell' ? dotTiles(lines) : [];
+    this.spots = def.type === 'COLLECT' && MOVING_ICONS.includes(def.icon) ? dotTiles(lines) : [];
     switch (def.type) {
       case 'COLLECT':
         this.items = pickSpread(lines, def.count, rng).map((t, i) => ({
@@ -61,7 +63,7 @@ export class Mission {
           label: def.icon === 'letters' ? LETTERS[i % LETTERS.length] : '',
           taken: false,
           // Las células se escalonan para que no desaparezcan todas a la vez.
-          move: def.icon === 'cell' ? { state: 'idle' as const, ticks: Math.round(CELL_MOVE_SECONDS * TICK_RATE * (0.5 + i / Math.max(1, def.count))) } : undefined,
+          move: MOVING_ICONS.includes(def.icon) ? { state: 'idle' as const, ticks: Math.round(CELL_MOVE_SECONDS * TICK_RATE * (0.5 + i / Math.max(1, def.count))) } : undefined,
         }));
         break;
       case 'REACH':
@@ -218,6 +220,7 @@ export class Mission {
           ember: `RECOGE ${d.count} ASCUAS`,
           star: `RECOGE ${d.count} ESTRELLAS`,
           key: `RECUPERA ${d.count} LLAVES`,
+          chip: `RECUPERA ${d.count} ARCHIVOS`,
         };
         return [what[d.icon], d.timeLimit ? `ANTES DE ${d.timeLimit} SEGUNDOS` : ''];
       }
@@ -465,6 +468,24 @@ function drawCollectible(ctx: CanvasRenderingContext2D, icon: CollectIcon, x: nu
       ctx.moveTo(3.2, 3.2);
       ctx.lineTo(4.8, 1.6);
       ctx.stroke();
+      break;
+    }
+    case 'chip': {
+      // Archivo corrupto: chip verde con patillas y un pixel rosa que parpadea.
+      glow(ctx, '#3ff0ff');
+      ctx.fillStyle = '#10343a';
+      ctx.fillRect(-3.4, -3.4, 6.8, 6.8);
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#3ff0ff';
+      ctx.lineWidth = 0.7;
+      ctx.strokeRect(-3.4, -3.4, 6.8, 6.8);
+      ctx.fillStyle = '#9fe9ee';
+      for (let i = -2; i <= 2; i += 2) {
+        ctx.fillRect(-5, i - 0.4, 1.6, 0.9);
+        ctx.fillRect(3.4, i - 0.4, 1.6, 0.9);
+      }
+      ctx.fillStyle = Math.floor(frame / 6) % 2 === 0 ? '#ff3fd2' : '#3ff0ff';
+      ctx.fillRect(-1.4, -1.4, 2.8, 2.8);
       break;
     }
     case 'pearl': {

@@ -1090,3 +1090,55 @@ describe('fantasma gigante del castillo', () => {
     expect(b.present).toBe(false);
   });
 });
+
+describe('elementos del Núcleo Glitch', () => {
+  const has = (type: string) => Array.from({ length: 100 }, (_, i) => i + 1).filter((n) => buildLevel(n).mechanics.some((m) => m.type === type));
+  it('solo salen en algunos niveles del mundo 10', () => {
+    expect(has('cloak')).toEqual([93, 98, 100]);
+    expect(has('hole')).toEqual([91, 94, 97, 99]);
+    expect(has('corrupt')).toEqual([92, 96, 100]);
+  });
+
+  it('el manto vuelve invisible a Pac-Man y se puede coger solo una vez seguida', () => {
+    const s = setup(93);
+    const cloak = s.mechanics.find((m) => m.kind === 'cloak') as unknown as { tiles: { col: number; row: number }[] };
+    const t = cloak.tiles[0];
+    expect(s.view.has('invisible')).toBe(false);
+    s.place(t.col, t.row);
+    s.run(1);
+    expect(s.view.has('invisible')).toBe(true);
+    expect(s.view.poisoned).toBe(false); // ayuda: no pone a Pac-Man verde
+    expect(s.sounds).toContain('collect');
+  });
+
+  it('el agujero de datos te lleva lejos, sin avisar, y se cierra unos segundos', () => {
+    const s = setup(94);
+    const hole = s.mechanics.find((m) => m.kind === 'hole') as unknown as { tiles: { col: number; row: number }[] };
+    const t = hole.tiles[0];
+    s.place(t.col, t.row);
+    s.run(1);
+    const dist = Math.abs(s.pac.col - t.col) + Math.abs(s.pac.row - t.row);
+    expect(dist).toBeGreaterThanOrEqual(9);
+    // Cerrado: volver a pisarlo no hace nada.
+    const there = { x: s.pac.x, y: s.pac.y };
+    s.place(t.col, t.row);
+    s.run(5);
+    expect(s.pac.col).toBe(t.col);
+    expect(there).toBeDefined();
+  });
+
+  it('la zona corrupta gira el mando mientras se pisa y un instante después', () => {
+    const s = setup(92);
+    const z = s.mechanics.find((m) => m.kind === 'corrupt') as unknown as { tileList: { col: number; row: number }[] };
+    const t = z.tileList[0];
+    s.place(t.col, t.row);
+    s.run(1);
+    expect(s.view.has('scramble')).toBe(true);
+    s.place(13, 23);
+    for (let i = 0; i < 120; i++) {
+      s.run(1);
+      s.view.update();
+    }
+    expect(s.view.has('scramble')).toBe(false);
+  });
+});

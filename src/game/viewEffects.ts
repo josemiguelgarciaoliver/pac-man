@@ -4,7 +4,7 @@ import { Dir, TICK_RATE, opposite } from './constants';
  * Efectos de estado que alteran cómo se ve o se controla el juego. Los provocan las setas tóxicas
  * y los "fenómenos" de algunos niveles. Todos son temporales.
  */
-export type EffectKind = 'wobble' | 'invert' | 'scramble' | 'rotate' | 'mirror' | 'dark' | 'turbo' | 'boost' | 'gun';
+export type EffectKind = 'wobble' | 'invert' | 'scramble' | 'rotate' | 'mirror' | 'dark' | 'turbo' | 'boost' | 'gun' | 'invisible';
 
 export const EFFECT_INFO: Record<EffectKind, { label: string; color: string }> = {
   wobble: { label: 'VISION BORROSA', color: '#c58bff' },
@@ -16,6 +16,7 @@ export const EFFECT_INFO: Record<EffectKind, { label: string; color: string }> =
   turbo: { label: 'TURBO', color: '#3fdc6a' },
   boost: { label: 'SUPERVELOCIDAD', color: '#ffe94a' },
   gun: { label: 'DISPARO', color: '#ff9a45' },
+  invisible: { label: 'INVISIBLE', color: '#b8f0ff' },
 };
 
 /** Efectos que pueden salir de una seta o de un fenómeno (la supervelocidad es un objeto aparte). */

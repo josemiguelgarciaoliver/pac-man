@@ -12,7 +12,7 @@ export const missionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('COLLECT'),
     count: z.number().int().min(1).max(10),
-    icon: z.enum(['letters', 'nut', 'glyph', 'pearl', 'cell', 'gem', 'shell', 'ember', 'star', 'key']),
+    icon: z.enum(['letters', 'nut', 'glyph', 'pearl', 'cell', 'gem', 'shell', 'ember', 'star', 'key', 'chip']),
     timeLimit: z.number().int().min(10).max(300).optional(),
   }),
   /** Llegar a un punto del mapa, a veces contra reloj. */
@@ -87,6 +87,22 @@ export const mechanicSchema = z.discriminatedUnion('type', [
     everySeconds: z.number().min(4).max(30),
     /** Radio de la salpicadura en casillas. */
     splash: z.number().int().min(1).max(3).default(1),
+  }),
+  /** Manto glitch: Pac-Man invisible unos segundos (los fantasmas pierden su rastro). */
+  z.object({
+    type: z.literal('cloak'),
+    count: z.number().int().min(1).max(2),
+    seconds: z.number().min(3).max(20).default(8),
+  }),
+  /** Agujeros de datos: te escupen a una casilla cualquiera del laberinto. */
+  z.object({
+    type: z.literal('hole'),
+    count: z.number().int().min(1).max(3),
+  }),
+  /** Zonas corruptas: mientras las pisas, el mando se gira. */
+  z.object({
+    type: z.literal('corrupt'),
+    count: z.number().int().min(1).max(4),
   }),
   /** Fantasma gigante: atraviesa paredes y persigue a Pac-Man; se paraliza si Pac-Man lo mira. Se va al rato. */
   z.object({

@@ -659,6 +659,8 @@ export class Game {
     if (g.state === 'eaten') return HOUSE_DOOR_TILE;
     const decoy = this.helpers.decoy;
     // El señuelo de Aleix obliga a los fantasmas a perseguirlo, también en dispersión.
+    // Invisible, Pac-Man no tiene rastro: los fantasmas se van a sus esquinas (salvo el señuelo de Aleix).
+    if (!decoy && this.view.has('invisible')) return this.corners[g.name];
     if (!decoy && this.isScatter() && !(g.name === 'blinky' && g.elroy > 0)) return this.corners[g.name];
     const blinky = this.ghost('blinky');
     const quarry = decoy ? { col: decoy.col, row: decoy.row, dir: Dir.Left } : { col: this.pac.col, row: this.pac.row, dir: this.pac.dir };
@@ -1068,6 +1070,15 @@ export class Game {
       return;
     }
     const anim = this.pac.moving && this.state === 'play' ? this.pac.anim : 0;
+    if (this.view.has('invisible') && this.state === 'play') {
+      // Casi transparente, con parpadeos y un desplazamiento de "interferencia".
+      const flick = Math.floor(this.frame / 4) % 6 === 0;
+      ctx.save();
+      ctx.globalAlpha = flick ? 0.55 : 0.22;
+      drawPac(ctx, this.pac.x + (flick ? 1.5 : 0), y, this.pac.dir, anim, palette);
+      ctx.restore();
+      return;
+    }
     if (this.view.has('boost') && this.state === 'play') {
       // Estela: copias cada vez más tenues de dónde estuvo Pac-Man.
       for (const [back, alpha] of [[8, 0.1], [5, 0.2], [3, 0.3]] as const) {

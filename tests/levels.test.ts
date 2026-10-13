@@ -298,3 +298,16 @@ describe('llaves del castillo', () => {
     }
   });
 });
+
+describe('misiones de archivos del glitch', () => {
+  it('hay dos misiones de archivos (chips) con tiempo limitado en el mundo 10 y se mueven como las células', () => {
+    const chips = levels.filter((l) => l.mission.type === 'COLLECT' && l.mission.icon === 'chip');
+    expect(chips.map((l) => l.level)).toEqual([91, 97]);
+    for (const l of chips) expect(l.world).toBe(10);
+    const l = chips[0];
+    const m = new Mission(l.mission, l.maze, createRng(3));
+    const start = m.itemTiles.map((t) => `${t.col},${t.row}`);
+    for (let i = 0; i < 60 * 40; i++) m.update({ x: 0, y: 0, col: 1, row: 1 });
+    expect(m.itemTiles.map((t) => `${t.col},${t.row}`).filter((t) => !start.includes(t)).length).toBeGreaterThan(0);
+  });
+});
