@@ -73,8 +73,8 @@ export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
   31: { mechanics: [mud(3)] },
   32: { mechanics: [mud(3), portals(1)] },
   33: { mechanics: [bombs(2, 3.5)] },
-  34: { mechanics: [phenomenon('wobble', 16, 7), portals(1)] },
-  35: { mission: { type: 'SURVIVE', seconds: 90 }, mechanics: [phenomenon('wobble', 18, 8)] },
+  34: { mechanics: [shrooms(2, ['wobble'], 7), portals(1)] },
+  35: { mission: { type: 'SURVIVE', seconds: 90 }, mechanics: [shrooms(2, ['wobble'], 8)] },
   36: { mechanics: [portals(2)] },
   37: { mechanics: [spikes(3, 5)] },
   38: { mission: { type: 'RESCUE' }, mechanics: [mud(2)] }, // rescate del pingüino hasta el iglú, con Pac-Man a mitad de velocidad
@@ -88,14 +88,14 @@ export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
   44: { mechanics: [turrets(2, 6)] },
   45: { mission: { type: 'COLLECT', count: 3, icon: 'glyph' }, mechanics: [turrets(1, 6)] },
   46: { mechanics: [turrets(3, 6), portals(1)] },
-  47: { mechanics: [phenomenon('wobble', 14, 8), mud(2)] },
+  47: { mechanics: [shrooms(2, ['wobble'], 8), mud(2)] },
   48: { mechanics: [spikes(4, 4), saws(1, 0.7)] },
   49: { mission: { type: 'RESCUE' }, mechanics: [gates(3)] },
   50: { mechanics: [turrets(3, 5), bombs(1, 3, 2, 'bottom'), spikes(2), portals(1, 'topBottom')] },
 
   // ── Mundo 6 — Fondo Marino: corrientes, medusas y remolinos ──
   51: { mechanics: [belts(4, { speed: 0.42, ghosts: true })] },
-  52: { mechanics: [mud(3), phenomenon('wobble', 18, 6)] },
+  52: { mechanics: [mud(3), shrooms(2, ['wobble'], 6)] },
   53: { mechanics: [saws(3, 0.5)] },
   54: { mechanics: [portals(2)] },
   55: { mechanics: [gates(3, 5, 3), belts(3, { speed: 0.42 })] },
