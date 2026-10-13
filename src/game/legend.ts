@@ -1,6 +1,6 @@
-import { FAMILY } from '../data/family';
 import { drawText, drawTextCentered } from '../engine/font';
 import { COLORS, SCREEN_W } from './constants';
+import { drawFace } from './faces';
 
 /**
  * Pantalla "Objetos y peligros": una línea por elemento (icono + frase corta). Todo cabe en una sola
@@ -66,11 +66,6 @@ const line = (ctx: CanvasRenderingContext2D, color: string, w: number, ...pts: n
   for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
   ctx.stroke();
 };
-const face = (ctx: CanvasRenderingContext2D, color: string): void => {
-  circle(ctx, 0, 0, 3.6, color);
-  circle(ctx, -1.2, -0.6, 0.6, '#1a1a2a');
-  circle(ctx, 1.2, -0.6, 0.6, '#1a1a2a');
-};
 
 /** Iconos diminutos (caben en ≈10×8 px, centrados en el origen). */
 const ICONS: Record<string, Icon> = {
@@ -98,8 +93,8 @@ const ICONS: Record<string, Icon> = {
     ctx.fillRect(-3.2, -0.2, 2.4, 3.6);
     line(ctx, '#ff9a45', 0.8, 4.4, -1.2, 6, -1.2);
   },
-  aleix: (ctx) => face(ctx, FAMILY.aleix.color),
-  aina: (ctx) => face(ctx, FAMILY.aina.color),
+  aleix: (ctx) => drawFace(ctx, 'aleix', 4.6),
+  aina: (ctx) => drawFace(ctx, 'aina', 4.6),
   ankh: (ctx) => {
     glow(ctx, '#ffd24a', 2);
     ctx.strokeStyle = '#ffd24a';

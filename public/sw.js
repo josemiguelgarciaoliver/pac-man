@@ -1,6 +1,6 @@
 // Service worker: deja el juego instalable y jugable sin conexión.
 // Cambia VERSION para forzar que los clientes descarguen todo de nuevo.
-const VERSION = 'pacman-v3';
+const VERSION = 'pacman-v4';
 
 const CORE = [
   './',
@@ -9,6 +9,8 @@ const CORE = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
+  './assets/faces/aina.png',
+  './assets/faces/aleix.png',
   ...['start', 'waka', 'eat_fruit', 'eat_ghost', 'extra_life', 'intermission', 'death'].map((n) => `./assets/audio/${n}.wav`),
 ];
 

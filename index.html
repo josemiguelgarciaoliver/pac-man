@@ -37,6 +37,8 @@
       .touch.dpad-on #helpers, .touch:not(.dpad-on) #helpers { flex-direction: column; }
       .helper { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--c); background: rgba(10, 12, 40, .6); color: var(--c);
         font: 800 11px/1.1 system-ui, sans-serif; letter-spacing: .04em; cursor: pointer; padding: 0; box-shadow: 0 0 10px color-mix(in srgb, var(--c) 45%, transparent); }
+      .helper img { display: block; width: 38px; height: 38px; margin: 0 auto 1px; border-radius: 50%; object-fit: cover; background: rgba(255, 255, 255, .08); }
+      .helper span { display: block; font-size: 9px; }
       .helper:active { background: color-mix(in srgb, var(--c) 35%, transparent); }
       .helper.used { opacity: .35; box-shadow: none; filter: grayscale(.8); }
 
@@ -82,8 +84,8 @@
         </div>
         <div id="helpers">
           <button class="helper" id="btn-fire" style="--c:#ff9a45" aria-label="Disparar">FUEGO</button>
-          <button class="helper" id="btn-aina" style="--c:#7fd7ff" aria-label="Aina: pista">AINA<br />PISTA</button>
-          <button class="helper" id="btn-aleix" style="--c:#ffb347" aria-label="Aleix: señuelo">ALEIX<br />SEÑUELO</button>
+          <button class="helper" id="btn-aina" style="--c:#7fd7ff" aria-label="Aina: pista"><img src="./assets/faces/aina.png" alt="" /><span>PISTA</span></button>
+          <button class="helper" id="btn-aleix" style="--c:#ffb347" aria-label="Aleix: señuelo"><img src="./assets/faces/aleix.png" alt="" /><span>SEÑUELO</span></button>
         </div>
         <div id="buttons">
           <button class="btn" id="btn-pause" aria-label="Pausa" title="Pausa (P)"></button>
