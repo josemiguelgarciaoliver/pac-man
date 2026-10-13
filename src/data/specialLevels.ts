@@ -19,7 +19,6 @@ export const SPECIAL_LAYOUTS: Record<number, SpecialLayout> = {
   50: { kind: 'pyramid', title: 'LA GRAN PIRAMIDE' },
   58: { kind: 'asteroids', title: 'EL ARRECIFE ABIERTO', seed: 58 },
   66: { kind: 'crater', title: 'EL CRATER' },
-  77: { kind: 'asteroids', title: 'CAMPO DE ASTEROIDES', seed: 77 },
   86: { kind: 'throne', title: 'EL SALON DEL TRONO' },
   93: { kind: 'grid', title: 'EL TABLERO ROTO' },
   99: { kind: 'asteroids', title: 'EL CAMPO VACIO', seed: 99 },
