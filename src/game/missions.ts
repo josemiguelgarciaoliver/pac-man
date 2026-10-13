@@ -1,6 +1,6 @@
 import { MAZE_TOP, TICK_RATE, TILE } from './constants';
 import { PAC_SPAWN_TILE } from './maze/generator';
-import { farthestFromSpawn, pickSpread, type TileXY } from './level/placement';
+import { dotTiles, farthestFromSpawn, pickSpread, type TileXY } from './level/placement';
 import type { MissionDef } from './level/schema';
 import type { Rng } from './random';
 
@@ -16,11 +16,20 @@ const HUNT_RESPAWN_SECONDS = 25;
 const FOLLOW_LAG = 22;
 const TAU = Math.PI * 2;
 
+/** Las células de energía se desvanecen cada cierto tiempo y reaparecen en otro sitio. */
+const CELL_MOVE_SECONDS = 8;
+const FADE_OUT_TICKS = 28;
+const FADE_IN_TICKS = 24;
+/** Las células nunca reaparecen a menos de estas casillas de Pac-Man (Manhattan). */
+const CELL_MIN_DISTANCE = 6;
+
 interface Item {
   col: number;
   row: number;
   label: string;
   taken: boolean;
+  /** Reubicación periódica (células): estado actual y ticks restantes del estado. */
+  move?: { state: 'idle' | 'out' | 'in'; ticks: number };
 }
 
 const center = (t: TileXY) => ({ x: t.col * TILE + TILE / 2, y: MAZE_TOP + t.row * TILE + TILE / 2 });
@@ -37,15 +46,23 @@ export class Mission {
   private ticks = 0;
   private trail: { x: number; y: number }[] = [];
   private respawnNeeded = false;
+  private readonly spots: TileXY[];
 
   constructor(
     readonly def: MissionDef,
     lines: readonly string[],
-    rng: Rng,
+    private readonly rng: Rng,
   ) {
+    this.spots = def.type === 'COLLECT' && def.icon === 'cell' ? dotTiles(lines) : [];
     switch (def.type) {
       case 'COLLECT':
-        this.items = pickSpread(lines, def.count, rng).map((t, i) => ({ ...t, label: def.icon === 'letters' ? LETTERS[i % LETTERS.length] : '', taken: false }));
+        this.items = pickSpread(lines, def.count, rng).map((t, i) => ({
+          ...t,
+          label: def.icon === 'letters' ? LETTERS[i % LETTERS.length] : '',
+          taken: false,
+          // Las células se escalonan para que no desaparezcan todas a la vez.
+          move: def.icon === 'cell' ? { state: 'idle' as const, ticks: Math.round(CELL_MOVE_SECONDS * TICK_RATE * (0.5 + i / Math.max(1, def.count))) } : undefined,
+        }));
         break;
       case 'REACH':
         // La meta está siempre al alcance del límite de tiempo (10 s): a ≈40 casillas, unos 5 s corriendo.
@@ -73,7 +90,11 @@ export class Mission {
     if (this.def.type === 'HUNT' && this.ticks % (HUNT_RESPAWN_SECONDS * TICK_RATE) === 0) this.respawnNeeded = true;
 
     for (const it of this.items) {
-      if (!it.taken && it.col === pac.col && it.row === pac.row) {
+      if (it.taken) continue;
+      this.stepMove(it, pac);
+      // Mientras se desvanece no se puede coger.
+      if (it.move?.state === 'out') continue;
+      if (it.col === pac.col && it.row === pac.row) {
         it.taken = true;
         events.item = true;
       }
@@ -83,6 +104,32 @@ export class Mission {
       events.freed = true;
     }
     return events;
+  }
+
+  /** Ciclo de una célula: quieta → se desvanece → aparece en otro sitio → quieta. */
+  private stepMove(it: Item, pac: { col: number; row: number }): void {
+    const m = it.move;
+    if (!m || --m.ticks > 0) return;
+    if (m.state === 'idle') {
+      m.state = 'out';
+      m.ticks = FADE_OUT_TICKS;
+    } else if (m.state === 'out') {
+      const taken = new Set(this.items.filter((o) => o !== it && !o.taken).map((o) => o.row * 100 + o.col));
+      const far = this.spots.filter((t) => !taken.has(t.row * 100 + t.col) && Math.abs(t.col - pac.col) + Math.abs(t.row - pac.row) >= CELL_MIN_DISTANCE && !(t.col === it.col && t.row === it.row));
+      const next = far.length > 0 ? far[this.rng.int(far.length)] : { col: it.col, row: it.row };
+      it.col = next.col;
+      it.row = next.row;
+      m.state = 'in';
+      m.ticks = FADE_IN_TICKS;
+    } else {
+      m.state = 'idle';
+      m.ticks = Math.round(CELL_MOVE_SECONDS * TICK_RATE);
+    }
+  }
+
+  /** Posición actual de las células sin recoger (para pruebas). */
+  get itemTiles(): TileXY[] {
+    return this.items.filter((i) => !i.taken).map((i) => ({ col: i.col, row: i.row }));
   }
 
   onGhostEaten(): void {
@@ -228,7 +275,29 @@ export class Mission {
       for (const it of this.items) {
         if (it.taken) continue;
         const c = center(it);
-        drawCollectible(ctx, this.def.icon, c.x, c.y + bob, it.label, frame);
+        const m = it.move;
+        // Desaparición: se encoge y se desvanece con un estallido de chispas; la aparición es al revés.
+        const k = !m || m.state === 'idle' ? 1 : m.state === 'out' ? m.ticks / FADE_OUT_TICKS : 1 - m.ticks / FADE_IN_TICKS;
+        if (k <= 0.02) continue;
+        ctx.save();
+        ctx.translate(c.x, c.y + bob);
+        ctx.globalAlpha = k;
+        ctx.scale(0.4 + 0.6 * k, 0.4 + 0.6 * k);
+        drawCollectible(ctx, this.def.icon, 0, 0, it.label, frame);
+        ctx.restore();
+        if (m && m.state !== 'idle') {
+          ctx.save();
+          ctx.fillStyle = '#d7ffd7';
+          for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * TAU + frame / 20;
+            const r = (1 - k) * 9;
+            ctx.globalAlpha = (1 - k) * 0.9;
+            ctx.beginPath();
+            ctx.arc(c.x + Math.cos(a) * r, c.y + bob + Math.sin(a) * r, 0.9, 0, TAU);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
       }
     }
     if ((type === 'REACH' || type === 'RESCUE') && this.goal) {

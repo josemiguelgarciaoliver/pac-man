@@ -248,3 +248,26 @@ describe('misiones de llegar a la meta', () => {
     }
   });
 });
+
+describe('células de energía que cambian de sitio', () => {
+  it('se desvanecen cada cierto tiempo y reaparecen en otro lugar sin poder cogerse mientras tanto', () => {
+    const def = buildLevel(75);
+    expect(def.mission).toMatchObject({ type: 'COLLECT', icon: 'cell' });
+    const m = new Mission(def.mission, def.maze, createRng(75 * 7919));
+    const far = { x: 0, y: 0, col: 1, row: 1 };
+    const start = m.itemTiles.map((t) => `${t.col},${t.row}`);
+    for (let i = 0; i < 60 * 40; i++) m.update(far);
+    const later = m.itemTiles.map((t) => `${t.col},${t.row}`);
+    expect(later).toHaveLength(start.length);
+    expect(later.filter((t) => !start.includes(t)).length).toBeGreaterThan(0);
+    expect(new Set(later).size).toBe(later.length); // nunca dos en la misma casilla
+  });
+
+  it('las demás misiones de recoger no mueven sus objetos', () => {
+    const def = buildLevel(53);
+    const m = new Mission(def.mission, def.maze, createRng(53 * 7919));
+    const before = JSON.stringify(m.itemTiles);
+    for (let i = 0; i < 60 * 30; i++) m.update({ x: 0, y: 0, col: 1, row: 1 });
+    expect(JSON.stringify(m.itemTiles)).toBe(before);
+  });
+});
