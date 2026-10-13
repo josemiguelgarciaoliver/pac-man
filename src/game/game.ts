@@ -1171,9 +1171,14 @@ export class Game {
       const info = EFFECT_INFO[effect.kind];
       const blink = effect.seconds > 2 || Math.floor(this.frame / 8) % 2 === 0;
       const label = `${info.label} ${effect.seconds}`;
-      if (blink) drawTextRight(ctx, label, SCREEN_W - 4, 15, info.color);
+      if (blink) {
+        // Sobre la fila de muro de arriba del laberinto, con fondo oscuro, para no pisar las letras de AINA y ALEIX.
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(Math.round((SCREEN_W - label.length * 6.6) / 2) - 3, MAZE_TOP, label.length * 6.6 + 6, 9);
+        drawTextCentered(ctx, label, SCREEN_W / 2, MAZE_TOP + 1, info.color);
+      }
     }
-    drawLetterHud(ctx, this.letters, 36, 22);
+    drawLetterHud(ctx, this.letters, SCREEN_W / 2, 22);
     this.drawHelperBadge(ctx, 10, 20, 'A', FAMILY.aina.color, this.helpers.ainaReady);
     this.drawHelperBadge(ctx, 24, 20, 'L', FAMILY.aleix.color, this.helpers.aleixReady);
   }

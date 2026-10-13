@@ -82,3 +82,14 @@ describe('letras sueltas por el laberinto', () => {
     expect(withLetters).toBeGreaterThan(80);
   });
 });
+
+describe('HUD de letras', () => {
+  it('las dos palabras juntas caben entre los botones de ayuda y el nivel, centradas en la pantalla', async () => {
+    const { LETTER_HUD_WIDTH } = await import('../src/game/letters');
+    const { SCREEN_W } = await import('../src/game/constants');
+    const left = SCREEN_W / 2 - LETTER_HUD_WIDTH / 2;
+    expect(left).toBeGreaterThan(30); // a la derecha de los botones A y L
+    expect(left + LETTER_HUD_WIDTH).toBeLessThan(SCREEN_W - 50);
+    expect(left + LETTER_HUD_WIDTH / 2).toBeCloseTo(SCREEN_W / 2, 5);
+  });
+});

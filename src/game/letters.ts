@@ -132,12 +132,17 @@ export class LetterTokens {
   }
 }
 
-/** Dibuja las dos palabras del HUD con las letras ya conseguidas encendidas. */
-export function drawLetterHud(ctx: CanvasRenderingContext2D, collection: LetterCollection, x: number, y: number): void {
+const PITCH = 5.4;
+const WORD_GAP = 3.5;
+/** Ancho (px) que ocupan las dos palabras juntas. */
+export const LETTER_HUD_WIDTH = (WORDS.aina.length + WORDS.aleix.length) * PITCH + WORD_GAP;
+
+/** Dibuja las dos palabras del HUD, centradas en `cx`, con las letras ya conseguidas encendidas. */
+export function drawLetterHud(ctx: CanvasRenderingContext2D, collection: LetterCollection, cx: number, y: number): void {
   ctx.save();
   ctx.font = "800 6.4px 'Trebuchet MS', Arial, sans-serif";
   ctx.textAlign = 'center';
-  let cx = x;
+  let px = cx - LETTER_HUD_WIDTH / 2;
   for (const w of Object.keys(WORDS) as Word[]) {
     const color = FAMILY[w].color;
     [...WORDS[w]].forEach((c, i) => {
@@ -149,10 +154,10 @@ export function drawLetterHud(ctx: CanvasRenderingContext2D, collection: LetterC
       } else {
         ctx.shadowBlur = 0;
       }
-      ctx.fillText(c, cx + 2.6, y);
-      cx += 5.4;
+      ctx.fillText(c, px + PITCH / 2, y);
+      px += PITCH;
     });
-    cx += 3.5;
+    px += WORD_GAP;
   }
   ctx.restore();
 }
