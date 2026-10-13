@@ -206,3 +206,27 @@ describe('ajustes y álbum', () => {
     expect(m.screen).toBe('main');
   });
 });
+
+describe('objetos y peligros', () => {
+  it('se abre desde el menú principal y se cierra con atrás', () => {
+    const m = new Menus(makeHost());
+    m.reset();
+    const n = m.mainItems().length;
+    press(m, ...Array<'down'>(n - 1).fill('down'), 'ok');
+    expect(m.screen).toBe('legend');
+    press(m, 'back');
+    expect(m.screen).toBe('main');
+  });
+
+  it('todos los elementos caben en la pantalla, con frases que no se salen', async () => {
+    const { LEGEND_ITEMS, LEGEND_HAZARDS, LEGEND_ROWS, LEGEND_ROW_HEIGHT } = await import('../src/game/legend');
+    const { CHAR_W } = await import('../src/engine/font');
+    const { SCREEN_H, SCREEN_W } = await import('../src/game/constants');
+    expect(LEGEND_ITEMS.length + LEGEND_HAZARDS.length).toBeGreaterThanOrEqual(24);
+    expect(30 + LEGEND_ROWS * LEGEND_ROW_HEIGHT).toBeLessThanOrEqual(SCREEN_H - 20); // deja sitio a la pista de "atrás"
+    for (const e of [...LEGEND_ITEMS, ...LEGEND_HAZARDS]) {
+      expect(22 + e.text.length * CHAR_W, e.text).toBeLessThanOrEqual(SCREEN_W - 4);
+      expect(e.text, e.text).toMatch(/^[A-Z0-9 :]+$/);
+    }
+  });
+});

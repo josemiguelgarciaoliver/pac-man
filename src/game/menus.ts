@@ -3,6 +3,7 @@ import { FAMILY } from '../data/family';
 import { LEVELS_PER_WORLD, TOTAL_LEVELS, WORLD_NAMES, worldLabel } from '../data/worlds';
 import { drawText, drawTextCentered, drawTextRight } from '../engine/font';
 import { COLORS, Dir, SCREEN_H, SCREEN_W } from './constants';
+import { drawLegend } from './legend';
 import { buildLevel } from './level/levels';
 import { isLevelUnlocked, isWorldUnlocked, lastSelectableLevel, starsOf, totalStars, worldStars, type Progress, type Settings } from './progress';
 import { DIFFICULTIES, DIFFICULTY_PRESETS, type Difficulty } from './rules';
@@ -10,7 +11,7 @@ import { drawEmblem } from './theme/emblems';
 import { themeOfWorld } from './theme/worldThemes';
 import type { Checkpoint } from './checkpoint';
 
-export type Screen = 'main' | 'worlds' | 'levels' | 'album' | 'settings';
+export type Screen = 'main' | 'worlds' | 'levels' | 'album' | 'settings' | 'legend';
 
 /** Lo que los menús necesitan del juego (así se pueden probar sin canvas ni audio). */
 export interface MenuHost {
@@ -72,7 +73,7 @@ export class Menus {
 
   /** Abre una pantalla concreta (parámetro de depuración `?menu=`). */
   open(screen: string, world = 1): void {
-    if (screen === 'worlds' || screen === 'levels' || screen === 'album' || screen === 'settings') this.screen = screen;
+    if (screen === 'worlds' || screen === 'levels' || screen === 'album' || screen === 'settings' || screen === 'legend') this.screen = screen;
     this.world = Math.min(10, Math.max(1, world));
   }
 
@@ -84,6 +85,7 @@ export class Menus {
     items.push({ label: 'SELECCIONAR NIVEL', action: () => (this.screen = 'worlds') });
     items.push({ label: `ALBUM  ${h.progress.album.length}/${ALBUM.length}`, action: () => (this.screen = 'album') });
     items.push({ label: 'AJUSTES', action: () => (this.screen = 'settings') });
+    items.push({ label: 'OBJETOS Y PELIGROS', action: () => (this.screen = 'legend') });
     return items;
   }
 
@@ -99,6 +101,9 @@ export class Menus {
         return this.updateAlbum(inp);
       case 'settings':
         return this.updateSettings(inp);
+      case 'legend':
+        if (inp.back || inp.confirm) this.screen = 'main';
+        return;
     }
   }
 
@@ -225,6 +230,10 @@ export class Menus {
         return this.drawAlbum(ctx);
       case 'settings':
         return this.drawSettings(ctx);
+      case 'legend':
+        this.drawHeader(ctx, 'OBJETOS Y PELIGROS', 'LO QUE VERAS EN LOS NIVELES');
+        drawLegend(ctx, this.host.frame);
+        return this.drawBackHint(ctx);
     }
   }
 
