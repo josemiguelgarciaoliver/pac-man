@@ -19,6 +19,7 @@ import { SawbladeMechanic } from './sawblade';
 import { SpikesMechanic } from './spikes';
 import { TeleportMechanic } from './teleport';
 import { TurretMechanic } from './turret';
+import { UfoMechanic } from './ufo';
 
 export type { Mechanic, MechanicEnv, SfxKind } from './mechanic';
 
@@ -56,6 +57,8 @@ export function createMechanics(defs: readonly MechanicDef[], lines: readonly st
         return new SpikesMechanic(def, lines, rng);
       case 'mushroom':
         return new MushroomMechanic(def, lines, rng, avoid);
+      case 'ufo':
+        return new UfoMechanic(def, lines, rng);
       case 'lava':
         return new LavaMechanic(def, lines, rng);
       case 'jellyfish':

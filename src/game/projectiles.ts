@@ -53,7 +53,7 @@ export class Projectiles {
     return true;
   }
 
-  update(maze: Maze, ghosts: readonly Ghost[], kill: (g: Ghost) => void): void {
+  update(maze: Maze, ghosts: readonly Ghost[], kill: (g: Ghost) => void, hitOther: (x: number, y: number) => boolean = () => false): void {
     if (this.cooldown > 0) this.cooldown--;
     if (this.flash && --this.flash.ticks <= 0) this.flash = null;
     for (const b of this.bullets) {
@@ -62,6 +62,11 @@ export class Projectiles {
       for (let i = 0; i < SPEED && b.life > 0; i++) {
         b.x += d.x;
         b.y += d.y;
+        // Cosas que vuelan por encima de las paredes (platillos) se comprueban antes que el muro.
+        if (hitOther(b.x, b.y)) {
+          b.life = 0;
+          break;
+        }
         const outside = b.x < -TILE || b.x > maze.cols * TILE + TILE;
         if (outside || !maze.isWalkable(Math.floor(b.x / TILE), Math.floor(b.y / TILE))) {
           b.life = 0;

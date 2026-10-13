@@ -20,6 +20,8 @@ export interface MechanicEnv {
   killGhost(ghost: Ghost): void;
   /** Un ayudante se come el punto de esa casilla (solo puntos normales). Devuelve si había uno. */
   eatDot(col: number, row: number): boolean;
+  /** Una explosión (bomba…): las mecánicas que pueden romperse con ella se enteran por `onBlast`. */
+  blast(x: number, y: number, radius: number): void;
   sfx(kind: SfxKind): void;
   /** Texto flotante sobre el laberinto (coordenadas del laberinto en px). */
   popup(text: string, x: number, y: number): void;
@@ -31,6 +33,10 @@ export interface MechanicEnv {
  */
 export interface Mechanic {
   readonly kind: string;
+  /** Disparo de la pistola de Pac-Man en (x, y): true si lo para (derriba algo suyo). */
+  shotAt?(x: number, y: number, env: MechanicEnv): boolean;
+  /** Explosión de radio `radius` (px) centrada en (x, y). */
+  onBlast?(x: number, y: number, radius: number, env: MechanicEnv): void;
   /** Se llama una vez por tick mientras se juega. */
   update(env: MechanicEnv): void;
   /** ¿Mata a Pac-Man en este momento? (sierras, disparos, pinchos, explosiones) */

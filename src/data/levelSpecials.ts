@@ -28,6 +28,7 @@ const shrooms = (count: number, effects: EffectKind[] = ['wobble', 'invert', 'sc
   effectSeconds,
 });
 const phenomenon = (effect: EffectKind, everySeconds: number, durationSeconds: number): MechanicDef => ({ type: 'phenomenon', effect, everySeconds, durationSeconds });
+const ufo = (everySeconds = 18, staySeconds = 9, fireSeconds = 2.4): MechanicDef => ({ type: 'ufo', everySeconds, staySeconds, fireSeconds });
 const lava = (everySeconds: number, count = 1, splash = 1): MechanicDef => ({ type: 'lava', count, everySeconds, splash });
 const jelly = (count = 1): MechanicDef => ({ type: 'jellyfish', count });
 const mud = (count: number): MechanicDef => ({ type: 'puddle', count });
@@ -120,16 +121,16 @@ export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
   70: { mechanics: [spikes(5, 4), turrets(3, 4.5), saws(2, 0.8), lava(8, 2)] },
 
   // ── Mundo 8 — Estación Espacial: portales, láseres y giros de gravedad ──
-  71: { mechanics: [mud(3), portals(1)] },
-  72: { mechanics: [portals(3)] },
-  73: { mechanics: [turrets(4, 4)] },
-  74: { mechanics: [shrooms(2, ['turbo', 'dark', 'mirror'], 7)] },
+  71: { mechanics: [mud(3), portals(1), ufo(24, 7, 3)] },
+  72: { mission: { type: 'COLLECT', count: 5, icon: 'star', timeLimit: 130 }, mechanics: [portals(3)] },
+  73: { mechanics: [turrets(4, 4), ufo(22, 8, 2.8)] },
+  74: { mission: { type: 'SURVIVE', seconds: 50 }, mechanics: [shrooms(2, ['turbo', 'dark', 'mirror'], 7), ufo(14, 9, 2.4)] },
   75: { mission: { type: 'COLLECT', count: 5, icon: 'cell' }, mechanics: [turrets(2, 5)] },
-  76: { mechanics: [phenomenon('rotate', 16, 8)] },
+  76: { mechanics: [phenomenon('rotate', 16, 8), ufo(20, 8, 2.6)] },
   77: { mechanics: [turrets(3, 4), shrooms(2, ['turbo', 'dark', 'mirror'], 7)] },
-  78: { mission: { type: 'RESCUE' }, mechanics: [portals(2)] },
+  78: { mission: { type: 'RESCUE' }, mechanics: [portals(2), ufo(18, 8, 2.6)] },
   79: { mechanics: [phenomenon('mirror', 13, 7), portals(1)] },
-  80: { mechanics: [turrets(4, 3.5), saws(3, 0.9), phenomenon('rotate', 18, 7)] },
+  80: { mechanics: [turrets(4, 3.5), saws(3, 0.9), phenomenon('rotate', 18, 7), ufo(16, 9, 2.2)] },
 
   // ── Mundo 9 — Castillo Fantasma: puertas, ballestas y espejos ──
   81: { mechanics: [gates(4, 5, 4)] },

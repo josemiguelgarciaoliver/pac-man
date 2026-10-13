@@ -506,6 +506,10 @@ export class Game {
       rng: this.rng,
       killGhost: (g) => this.killGhostByHazard(g),
       eatDot: (c, r) => this.helperEatsDot(c, r),
+      blast: (x, y, radius) => {
+        const env = this.mechanicEnv();
+        for (const m of this.mechanics) m.onBlast?.(x, y, radius, env);
+      },
       sfx: (kind) => this.audio.sfx(kind),
       popup: (text, x, y) => this.popups.push({ x, y, text, ticks: 110 }),
     };
@@ -711,7 +715,15 @@ export class Game {
     const env = this.mechanicEnv();
     for (const m of this.mechanics) m.update(env);
     this.syncWalls();
-    this.projectiles.update(this.maze, this.ghosts, (gh) => this.killGhostByHazard(gh));
+    {
+      const env = this.mechanicEnv();
+      this.projectiles.update(
+        this.maze,
+        this.ghosts,
+        (gh) => this.killGhostByHazard(gh),
+        (x, y) => this.mechanics.some((m) => m.shotAt?.(x, y, env)),
+      );
+    }
     if (this.mechanics.some((m) => m.hitsPac?.(this.pac))) {
       this.killPac();
       return;

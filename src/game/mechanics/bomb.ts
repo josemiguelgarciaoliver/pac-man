@@ -106,6 +106,7 @@ export class BombMechanic implements Mechanic {
     b.phase = 'boom';
     b.ticks = BOOM_TICKS;
     env.sfx('explosion');
+    env.blast(centerX(b.site.col), centerY(b.site.row), this.lethalRadius);
   }
 
   hitsPac(_pac: PacMan): boolean {

@@ -163,6 +163,7 @@ export class Mission {
           gem: `RECOGE ${d.count} GEMAS`,
           shell: `RECOGE ${d.count} CONCHAS`,
           ember: `RECOGE ${d.count} ASCUAS`,
+          star: `RECOGE ${d.count} ESTRELLAS`,
         };
         return [what[d.icon], d.timeLimit ? `ANTES DE ${d.timeLimit} SEGUNDOS` : ''];
       }
@@ -351,6 +352,21 @@ function drawCollectible(ctx: CanvasRenderingContext2D, icon: CollectIcon, x: nu
       ctx.lineTo(2.2, 4);
       ctx.lineTo(-2.2, 4);
       ctx.lineTo(-3.6, -0.6);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'star': {
+      // Estrella de cinco puntas dorada.
+      glow(ctx, '#ffe680');
+      ctx.fillStyle = '#ffd84a';
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const a = -Math.PI / 2 + (i * Math.PI) / 5;
+        const r = i % 2 === 0 ? 5 : 2.2;
+        if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+        else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
       ctx.closePath();
       ctx.fill();
       break;

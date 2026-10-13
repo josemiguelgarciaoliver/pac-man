@@ -12,7 +12,7 @@ export const missionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('COLLECT'),
     count: z.number().int().min(1).max(10),
-    icon: z.enum(['letters', 'nut', 'glyph', 'pearl', 'cell', 'gem', 'shell', 'ember']),
+    icon: z.enum(['letters', 'nut', 'glyph', 'pearl', 'cell', 'gem', 'shell', 'ember', 'star']),
     timeLimit: z.number().int().min(10).max(300).optional(),
   }),
   /** Llegar a un punto del mapa, a veces contra reloj. */
@@ -83,6 +83,16 @@ export const mechanicSchema = z.discriminatedUnion('type', [
     everySeconds: z.number().min(4).max(30),
     /** Radio de la salpicadura en casillas. */
     splash: z.number().int().min(1).max(3).default(1),
+  }),
+  /** Platillo volante: visita el laberinto, vuela sobre las paredes y dispara a Pac-Man; bombas y pistola lo derriban. */
+  z.object({
+    type: z.literal('ufo'),
+    /** Segundos medios entre visitas. */
+    everySeconds: z.number().min(8).max(40),
+    /** Segundos que se queda cada vez. */
+    staySeconds: z.number().min(4).max(20).default(9),
+    /** Segundos entre disparos. */
+    fireSeconds: z.number().min(1.2).max(6).default(2.4),
   }),
   /** Medusas que patrullan un pasillo y paralizan un momento a Pac-Man si lo rozan. */
   z.object({

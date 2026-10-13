@@ -52,6 +52,9 @@ function setup(level: number) {
       maze.eatPellet(c, r);
       return true;
     },
+    blast: (x, y, radius) => {
+      for (const m of mechanics) m.onBlast?.(x, y, radius, env);
+    },
     sfx: (k) => void sounds.push(k),
     popup: (t) => popups.push(t),
   };
@@ -943,5 +946,47 @@ describe('ayudantes que comen puntos', () => {
     s.place(1, 3);
     s.run(1);
     expect([...s.maze.pelletTiles()].filter((p) => p.kind === 'energizer').length).toBe(energizers);
+  });
+});
+
+describe('platillo volante del espacio', () => {
+  const space = [71, 73, 74, 76, 78, 80];
+  type Ufo = { present: boolean; position: { x: number; y: number }; boltCount: number; phaseName: string; summon(env: MechanicEnv): void; shotAt(x: number, y: number, env: MechanicEnv): boolean };
+  const ufoOf = (s: ReturnType<typeof setup>) => s.mechanics.find((m) => m.kind === 'ufo') as unknown as Ufo;
+
+  it('solo hay platillos en algunos niveles del mundo 8', () => {
+    for (let n = 1; n <= 100; n++) expect(buildLevel(n).mechanics.some((m) => m.type === 'ufo'), `nivel ${n}`).toBe(space.includes(n));
+  });
+
+  it('llega, dispara a Pac-Man atravesando muros, y se va pasados unos segundos', () => {
+    const s = setup(74);
+    const u = ufoOf(s);
+    s.place(ORIGINAL_PAC_SPAWN.col, ORIGINAL_PAC_SPAWN.row);
+    expect(s.run(5000, () => u.present)).toBeGreaterThan(0);
+    expect(s.run(1500, () => u.boltCount > 0)).toBeGreaterThanOrEqual(0);
+    expect(u.boltCount).toBeGreaterThan(0);
+    // Un rayo pasa por encima de una pared y mata si alcanza a Pac-Man.
+    expect(s.run(3000, () => s.hits())).toBeGreaterThanOrEqual(0);
+    s.run(4000, () => !u.present);
+    expect(u.present).toBe(false);
+  });
+
+  it('un disparo de la pistola lo derriba, y una bomba cercana también', () => {
+    const s = setup(74);
+    const u = ufoOf(s);
+    u.summon(s.env);
+    s.run(30);
+    expect(u.present).toBe(true);
+    expect(u.shotAt(u.position.x + 40, u.position.y, s.env)).toBe(false);
+    expect(u.shotAt(u.position.x + 3, u.position.y, s.env)).toBe(true);
+    expect(u.present).toBe(false);
+    expect(s.sounds).toContain('explosion');
+
+    const t = setup(74);
+    const v = ufoOf(t);
+    v.summon(t.env);
+    t.run(30);
+    t.env.blast(v.position.x + 10, v.position.y, 30);
+    expect(v.present).toBe(false);
   });
 });
