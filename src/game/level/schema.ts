@@ -12,7 +12,7 @@ export const missionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('COLLECT'),
     count: z.number().int().min(1).max(10),
-    icon: z.enum(['letters', 'nut', 'glyph', 'pearl', 'cell', 'gem', 'shell', 'ember', 'star']),
+    icon: z.enum(['letters', 'nut', 'glyph', 'pearl', 'cell', 'gem', 'shell', 'ember', 'star', 'key']),
     timeLimit: z.number().int().min(10).max(300).optional(),
   }),
   /** Llegar a un punto del mapa, a veces contra reloj. */

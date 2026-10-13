@@ -217,6 +217,7 @@ export class Mission {
           shell: `RECOGE ${d.count} CONCHAS`,
           ember: `RECOGE ${d.count} ASCUAS`,
           star: `RECOGE ${d.count} ESTRELLAS`,
+          key: `RECUPERA ${d.count} LLAVES`,
         };
         return [what[d.icon], d.timeLimit ? `ANTES DE ${d.timeLimit} SEGUNDOS` : ''];
       }
@@ -444,6 +445,26 @@ function drawCollectible(ctx: CanvasRenderingContext2D, icon: CollectIcon, x: nu
       }
       ctx.closePath();
       ctx.fill();
+      break;
+    }
+    case 'key': {
+      // Llave antigua dorada: aro, caña y dos dientes.
+      glow(ctx, '#ffd24a');
+      ctx.strokeStyle = '#ffd24a';
+      ctx.fillStyle = '#ffd24a';
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(-2.6, -2.6, 2.4, 0, TAU);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-0.9, -0.9);
+      ctx.lineTo(3.6, 3.6);
+      ctx.moveTo(1.6, 1.6);
+      ctx.lineTo(3.4, -0.2);
+      ctx.moveTo(3.2, 3.2);
+      ctx.lineTo(4.8, 1.6);
+      ctx.stroke();
       break;
     }
     case 'pearl': {

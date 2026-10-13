@@ -287,3 +287,14 @@ describe('rescate y muerte de Pac-Man', () => {
     expect(m.target({ col: 1, row: 1 })).toEqual(cage);
   });
 });
+
+describe('llaves del castillo', () => {
+  it('hay misiones de llaves con poco tiempo solo en el mundo 9', () => {
+    const keys = levels.filter((l) => l.mission.type === 'COLLECT' && l.mission.icon === 'key');
+    expect(keys.map((l) => l.level)).toEqual([82, 88]);
+    for (const l of keys) {
+      expect(l.world).toBe(9);
+      expect(l.mission.type === 'COLLECT' && l.mission.timeLimit).toBeLessThanOrEqual(70);
+    }
+  });
+});

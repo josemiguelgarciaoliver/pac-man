@@ -135,13 +135,13 @@ export const LEVEL_SPECIALS: Record<number, LevelSpecial> = {
 
   // ── Mundo 9 — Castillo Fantasma: puertas, ballestas y espejos ──
   81: { mechanics: [gates(4, 5, 4)] },
-  82: { mechanics: [turrets(3, 4)] },
+  82: { mission: { type: 'COLLECT', count: 4, icon: 'key', timeLimit: 60 }, mechanics: [turrets(3, 4)] },
   83: { mechanics: [shrooms(3, ['dark', 'wobble'], 8), boo(24, 10)] },
   84: { mechanics: [gates(5, 4, 3)] },
   85: { mission: { type: 'HUNT', ghosts: 12 }, mechanics: [gates(2), boo(22, 11)] },
   86: { mechanics: [phenomenon('mirror', 12, 7)] },
   87: { mechanics: [bombs(3, 3), portals(2), boo(20, 12)] },
-  88: { mechanics: [saws(3, 0.9), gates(3)] },
+  88: { mission: { type: 'COLLECT', count: 5, icon: 'key', timeLimit: 70 }, mechanics: [saws(3, 0.9), gates(3)] },
   89: { mechanics: [spikes(4, 4), turrets(2, 4), shrooms(2), boo(18, 12)] },
   90: { mechanics: [turrets(3, 4), gates(3, 5, 3), bombs(2, 3), boo(15, 14)] },
 
